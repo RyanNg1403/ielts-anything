@@ -4,7 +4,7 @@ import { chromium } from "playwright-core";
 
 const CHROME = process.env.CHROME ??
   `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
-const URL = process.env.APP_URL ?? "http://localhost:5173/";
+const URL = process.env.APP_URL ?? "http://127.0.0.1:5173/";
 const [cmd = "home", arg] = process.argv.slice(2);
 const width = Number(process.env.W ?? 1440), height = Number(process.env.H ?? 900);
 

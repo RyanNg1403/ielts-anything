@@ -1,105 +1,59 @@
-import { useState, type KeyboardEvent } from "react";
-import { SKILLS, encodeMessage, skillMeta, type Mode, type Skill } from "../skills.ts";
+import { useState } from "react";
+import { MentionInput } from "./MentionInput.tsx";
 
-const tabColor: Record<Skill, string> = {
-  reading: "var(--color-reading)",
-  listening: "var(--color-listening)",
-  writing: "var(--color-writing)",
-  speaking: "var(--color-speaking)",
-};
+const IDEAS: { skill: "reading" | "listening" | "writing" | "speaking"; text: string }[] = [
+  { skill: "reading", text: "A full Reading test on the science of sleep" },
+  { skill: "listening", text: "A Listening Part 1 drill: booking a climbing course" },
+  { skill: "writing", text: "Writing Task 2 on AI in schools" },
+  { skill: "speaking", text: "A Speaking mock test about travel" },
+];
 
-/** The home composer: an index card with one tab per IELTS skill. */
+/** The home composer: one box. The tutor works out the skill and length from what you write. */
 export function PracticeComposer({ onSubmit, disabled }: { onSubmit: (raw: string) => void; disabled?: boolean }) {
-  const [skill, setSkill] = useState<Skill>("reading");
-  const [mode, setMode] = useState<Mode>("full");
   const [text, setText] = useState("");
-  const meta = skillMeta(skill);
-
   const submit = (value = text) => {
     if (!value.trim() || disabled) return;
-    onSubmit(encodeMessage(value.trim(), skill, mode));
+    onSubmit(value.trim());
     setText("");
   };
 
   return (
     <div className="w-full">
-      <div role="tablist" aria-label="IELTS skill" className="flex gap-1 overflow-x-auto pl-2 sm:pl-4 [scrollbar-width:none]">
-        {SKILLS.map((s) => {
-          const active = s.id === skill;
-          return (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={active}
-              onClick={() => setSkill(s.id)}
-              className={`relative shrink-0 rounded-t-lg border border-b-0 px-3 pt-2 pb-2.5 text-sm sm:px-4 font-medium transition-colors ${
-                active ? "z-10 -mb-px border-rule-strong bg-surface text-ink" : "border-transparent text-ink-soft hover:text-ink"
-              }`}
-              style={active ? { boxShadow: `inset 0 3px 0 ${tabColor[s.id]}` } : undefined}
-            >
-              <span className="mr-2 inline-block size-2 rounded-full align-middle" style={{ background: tabColor[s.id] }} />
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="rounded-xl border border-rule-strong bg-surface shadow-[0_1px_0_var(--color-rule),0_12px_32px_-18px_rgba(22,35,59,0.35)]">
-        <div className="px-4 pt-5 sm:px-6">
-          <label htmlFor="topic" className="font-serif text-xl font-semibold text-ink">
-            {meta.prompt}
-          </label>
-          <textarea
-            id="topic"
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e: KeyboardEvent) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="A topic, a question, or paste a link or notes you want the test to be based on"
-            className="mt-3 w-full resize-none bg-[repeating-linear-gradient(transparent,transparent_31px,var(--color-rule)_31px,var(--color-rule)_32px)] font-serif text-[17px] leading-8 text-ink placeholder:text-ink-faint focus:outline-none"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-rule px-4 py-3 sm:px-6">
-          <div role="radiogroup" aria-label="Practice length" className="flex rounded-lg bg-paper p-0.5 text-sm">
-            {(["full", "drill"] as const).map((m) => (
-              <button
-                key={m}
-                role="radio"
-                aria-checked={mode === m}
-                onClick={() => setMode(m)}
-                className={`rounded-md px-3 py-1.5 ${mode === m ? "bg-surface font-medium text-ink shadow-sm" : "text-ink-soft hover:text-ink"}`}
-              >
-                {m === "full" ? "Full test" : "Drill"}
-              </button>
-            ))}
-          </div>
-          <span className="text-sm text-ink-soft">{mode === "full" ? meta.full : meta.drill}</span>
+      <div className="rounded-2xl border border-rule bg-surface shadow-[var(--shadow-float)] transition-colors focus-within:border-rule-strong">
+        <MentionInput
+          rows={3}
+          value={text}
+          autoFocus
+          onChange={setText}
+          onSubmit={() => submit()}
+          ariaLabel="What do you want to practise?"
+          pickerBelow
+          placeholder="A test on any topic, or type @ to talk about a test you've taken"
+          className="block w-full resize-none rounded-t-2xl bg-transparent px-5 pt-4 text-[16px] leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none"
+        />
+        <div className="flex justify-end px-3 pb-3">
           <button
             onClick={() => submit()}
             disabled={!text.trim() || disabled}
-            className="ml-auto rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Start"
+            className="flex size-8 items-center justify-center rounded-lg bg-primary text-on-primary transition-opacity hover:bg-primary-hover disabled:opacity-25"
           >
-            Create practice
+            <svg aria-hidden viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" />
+            </svg>
           </button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 pl-1">
-        <span className="py-1 text-sm text-ink-faint">Try</span>
-        {meta.ideas.map((idea) => (
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        {IDEAS.map((idea) => (
           <button
-            key={idea}
-            onClick={() => submit(idea)}
+            key={idea.text}
+            onClick={() => submit(idea.text)}
             disabled={disabled}
-            className="rounded-full border border-rule bg-surface px-3 py-1 text-sm text-ink-soft hover:border-rule-strong hover:text-ink"
+            className="rounded-lg border border-rule px-3 py-1.5 text-[13.5px] text-ink-soft transition-colors hover:border-rule-strong hover:bg-surface hover:text-ink"
           >
-            {idea}
+            {idea.text}
           </button>
         ))}
       </div>
@@ -124,32 +78,31 @@ export function ReplyBox({
     setText("");
   };
   return (
-    <div className="flex items-end gap-2 rounded-xl border border-rule-strong bg-surface p-2 shadow-[0_8px_24px_-18px_rgba(22,35,59,0.4)]">
-      <textarea
-        rows={1}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            send();
-          }
-        }}
-        placeholder={busy ? "Codex is working…" : "Reply or ask for changes"}
-        className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] focus:outline-none"
-        aria-label="Message"
-      />
+    <div className="flex items-end gap-2 rounded-2xl border border-rule bg-surface p-2 pl-3 shadow-[var(--shadow-float)] focus-within:border-rule-strong">
+      <div className="flex-1">
+        <MentionInput
+          value={text}
+          onChange={setText}
+          onSubmit={send}
+          ariaLabel="Message"
+          placeholder={busy ? "Working on it…" : "Reply, or type @ to bring in a test"}
+          className="block max-h-40 min-h-10 w-full resize-none bg-transparent px-2 py-2 text-[15px] focus:outline-none"
+        />
+      </div>
       {busy ? (
-        <button onClick={onStop} className="rounded-lg border border-rule-strong px-3 py-2 text-sm text-ink-soft hover:text-ink">
-          Stop
+        <button onClick={onStop} aria-label="Stop" title="Stop" className="flex size-8 items-center justify-center rounded-lg bg-primary text-on-primary hover:bg-primary-hover">
+          <span className="size-2.5 rounded-[2px] bg-current" />
         </button>
       ) : (
         <button
           onClick={send}
           disabled={!text.trim()}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-40"
+          aria-label="Send"
+          className="flex size-8 items-center justify-center rounded-lg bg-primary text-on-primary hover:bg-primary-hover disabled:opacity-25"
         >
-          Send
+          <svg aria-hidden viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" />
+          </svg>
         </button>
       )}
     </div>

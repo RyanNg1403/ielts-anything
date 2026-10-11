@@ -1,0 +1,22 @@
+// Screenshots for theme + sidebar checks.
+import { chromium } from "playwright-core";
+const CHROME = `${process.env.HOME}/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`;
+const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: "dark" });
+const page = await ctx.newPage();
+const go = async (hash) => { await page.goto(`http://127.0.0.1:5173/${hash}`, { waitUntil: "networkidle" }); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(1200); };
+const conv = process.argv[2], test = process.argv[3];
+await go("#/"); await page.screenshot({ path: ".shots/m2-01-home-dark.png" });
+await go(`#/chat/${conv}`); await page.screenshot({ path: ".shots/m2-02-chat-dark.png" });
+await go(`#/test/${test}/review?q=3`); await page.screenshot({ path: ".shots/m2-03-review-dark.png" });
+await go("#/settings"); await page.screenshot({ path: ".shots/m2-04-settings-dark.png" });
+await page.keyboard.press("Meta+b"); await page.waitForTimeout(400);
+await go(`#/chat/${conv}`); await page.screenshot({ path: ".shots/m2-05-sidebar-hidden.png" });
+await page.keyboard.press("Meta+b"); await page.waitForTimeout(400);
+const handle = page.getByRole("separator", { name: "Resize sidebar" });
+const box = await handle.boundingBox();
+await page.mouse.move(box.x + 4, box.y + 300); await page.mouse.down(); await page.mouse.move(box.x + 104, box.y + 300, { steps: 5 }); await page.mouse.up();
+await page.screenshot({ path: ".shots/m2-06-sidebar-wide.png" });
+await page.mouse.move(box.x + 104, box.y + 300); await page.mouse.dblclick(box.x + 104, box.y + 300);
+await browser.close();
+console.log("ok");

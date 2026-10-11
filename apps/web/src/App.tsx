@@ -1,64 +1,100 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createConversation, listConversations, type Conversation } from "./api.ts";
+import { useEffect, useRef, useState } from "react";
+import { createConversation } from "./api.ts";
 import { Chat } from "./components/Chat.tsx";
 import { PracticeComposer } from "./components/Composer.tsx";
-import { Sidebar, type View } from "./components/Sidebar.tsx";
+import { SearchPalette } from "./components/SearchPalette.tsx";
+import { Sidebar, SidebarToggle } from "./components/Sidebar.tsx";
+import { ProgressPage } from "./pages/ProgressPage.tsx";
+import { SettingsPage } from "./pages/SettingsPage.tsx";
+import { TestsPage } from "./pages/TestsPage.tsx";
+import { go, useRoute } from "./router.ts";
+import { TestScreen } from "./test/TestScreen.tsx";
+import { useTheme } from "./theme.ts";
 
 export function App() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [view, setView] = useState<View>("practice");
-  const [creating, setCreating] = useState(false);
+  const route = useRoute();
+  useTheme(); // keeps "system" in sync with the OS
   const [drawer, setDrawer] = useState(false);
+  const [search, setSearch] = useState(false);
+  const [creating, setCreating] = useState(false);
   const firstMessage = useRef<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(() => stored("sidebar:open", "1") === "1");
+  const [sidebarWidth, setSidebarWidth] = useState(() => Number(stored("sidebar:width", "264")) || 264);
+  const desktop = () => window.matchMedia("(min-width: 768px)").matches;
+  const toggleSidebar = () => {
+    if (!desktop()) return setDrawer((d) => !d);
+    setSidebarOpen((o) => {
+      store("sidebar:open", o ? "0" : "1");
+      return !o;
+    });
+  };
 
-  const refresh = useCallback(() => listConversations().then(setConversations).catch(() => {}), []);
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = sidebarWidth;
+    const move = (ev: PointerEvent) => setSidebarWidth(Math.min(420, Math.max(220, startW + ev.clientX - startX)));
+    const up = (ev: PointerEvent) => {
+      store("sidebar:width", String(Math.min(420, Math.max(220, startW + ev.clientX - startX))));
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.cursor = "";
+    };
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    const on = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearch((s) => !s);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
+
+  useEffect(() => setDrawer(false), [route]);
 
   const start = async (raw: string) => {
     setCreating(true);
     try {
       const id = await createConversation();
       firstMessage.current = raw;
-      setActiveId(id);
-      setView("practice");
-      setTimeout(refresh, 500);
+      go({ name: "chat", id });
     } finally {
       setCreating(false);
     }
   };
 
-  const open = (id: string) => {
-    firstMessage.current = null;
-    setActiveId(id);
-    setView("practice");
-  };
+  if (route.name === "test") return <TestScreen key={`${route.id}-${route.review}`} {...route} />;
 
   return (
     <div className="flex h-full">
-      {drawer && <div className="fixed inset-0 z-30 bg-ink/30 md:hidden" onClick={() => setDrawer(false)} aria-hidden />}
+      {drawer && <div className="fixed inset-0 z-30 bg-scrim md:hidden" onClick={() => setDrawer(false)} aria-hidden />}
       <div
-        className={`fixed inset-y-0 left-0 z-40 transition-transform md:static md:translate-x-0 ${drawer ? "translate-x-0" : "-translate-x-full"}`}
-        onClickCapture={(e) => {
-          if ((e.target as HTMLElement).closest("button")) setDrawer(false);
-        }}
+        className={`fixed inset-y-0 left-0 z-40 transition-transform md:relative md:translate-x-0 ${drawer ? "translate-x-0" : "-translate-x-full"} ${sidebarOpen ? "" : "md:hidden"}`}
       >
-      <Sidebar
-        conversations={conversations}
-        activeId={activeId}
-        view={view}
-        onNew={() => {
-          firstMessage.current = null;
-          setActiveId(null);
-          setView("practice");
-        }}
-        onOpen={open}
-        onView={setView}
-      />
+        <Sidebar route={route} onSearch={() => setSearch(true)} width={sidebarWidth} onCollapse={toggleSidebar} />
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          onPointerDown={startResize}
+          onDoubleClick={() => {
+            setSidebarWidth(264);
+            store("sidebar:width", "264");
+          }}
+          className="absolute inset-y-0 -right-1 hidden w-2 cursor-col-resize hover:bg-primary/20 md:block"
+        />
       </div>
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-3 border-b border-rule px-4 py-3 md:hidden">
           <button onClick={() => setDrawer(true)} aria-label="Open menu" className="rounded-md p-1.5 text-ink-soft hover:text-ink">
             <svg aria-hidden viewBox="0 0 20 20" className="size-5">
@@ -67,31 +103,43 @@ export function App() {
           </button>
           <span className="font-serif text-[17px] font-semibold">IELTS Anything</span>
         </header>
+        {!sidebarOpen && (
+          <div className="absolute top-3 left-3 z-20 hidden md:block">
+            <SidebarToggle onClick={toggleSidebar} label="Show sidebar (⌘B)" />
+          </div>
+        )}
         <div className="min-h-0 flex-1">
-        {view === "practice" && activeId && <Chat key={activeId} conversationId={activeId} initial={firstMessage} />}
-        {view === "practice" && !activeId && (
-          <div className="flex h-full items-center justify-center overflow-y-auto px-4 sm:px-8">
-            <div className="w-full max-w-[680px] py-12">
-              <h1 className="font-serif text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-ink">
-                Practise IELTS on something you actually care about.
-              </h1>
-              <p className="mt-3 max-w-[56ch] text-[16px] text-ink-soft">
-                Pick a skill, give it a topic, and get a test in the format of the Cambridge IELTS books, marked to the band.
-              </p>
-              <div className="mt-9">
+          {route.name === "chat" && (
+            <Chat key={route.id} conversationId={route.id} initial={firstMessage} />
+          )}
+          {route.name === "home" && (
+            <div className="flex h-full items-center justify-center overflow-y-auto px-4 sm:px-8">
+              <div className="w-full max-w-[680px] pb-[12vh]">
+                <h1 className="mb-8 text-center font-serif text-[34px] font-normal leading-tight tracking-tight text-ink sm:text-[42px]">What do you want to practise?</h1>
                 <PracticeComposer onSubmit={start} disabled={creating} />
               </div>
             </div>
-          </div>
-        )}
-        {view !== "practice" && (
-          <div className="mx-auto max-w-[680px] px-6 py-12">
-            <h1 className="font-serif text-2xl font-semibold">{view === "sources" ? "Sources" : "Settings"}</h1>
-            <p className="mt-2 text-ink-soft">Coming in a later milestone.</p>
-          </div>
-        )}
+          )}
+          {route.name === "tests" && <TestsPage />}
+          {route.name === "progress" && <ProgressPage />}
+          {(route.name === "settings" || route.name === "sources") && <SettingsPage />}
         </div>
       </main>
+      {search && <SearchPalette onClose={() => setSearch(false)} />}
     </div>
   );
+}
+
+function stored(key: string, fallback: string) {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function store(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
 }

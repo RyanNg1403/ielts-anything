@@ -8,14 +8,16 @@ const { id } = await (await fetch(`${base}/api/conversations`, { method: "POST" 
 console.log("conversation", id);
 const ws = new WebSocket(`${base.replace("http", "ws")}/ws?conversation=${id}`);
 let deltas = "";
-ws.on("open", () => ws.send(JSON.stringify({ type: "send", text, effort: "low" })));
+ws.on("open", () => ws.send(JSON.stringify({ type: "send", text, effort: process.env.EFFORT ?? "medium" })));
 ws.on("message", (raw) => {
   const e = JSON.parse(String(raw));
   if (e.type === "delta") { deltas += e.delta; return; }
   if (e.type === "thinking") return;
+  if (e.type === "progress") { console.log(`[${new Date().toISOString().slice(11,19)}] progress: ${e.label}`); return; }
+  if (e.type === "card") { console.log("CARD", JSON.stringify(e.card).slice(0, 600)); return; }
   if (e.type === "item") {
     const it = e.item;
-    if (it.type === "dynamicToolCall") console.log(`item ${e.phase}: tool ${it.tool} ${e.phase === "started" ? JSON.stringify(it.arguments).slice(0, 400) : `success=${it.success}`}`);
+    if (it.type === "dynamicToolCall") console.log(`[${new Date().toISOString().slice(11,19)}] tool ${it.tool} ${e.phase}${e.phase === "completed" ? ` success=${it.success} ${JSON.stringify(it.contentItems?.[0]?.text ?? "").slice(0, 700)}` : ""}`);
     else if (it.type === "agentMessage" && e.phase === "completed") console.log("agent:", it.text);
     else console.log(`item ${e.phase}: ${it.type}`);
     return;
