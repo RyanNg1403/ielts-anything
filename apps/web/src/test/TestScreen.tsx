@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { blockQuestions, type MarkedItem } from "@ielts/spec";
 import { loadProgress, saveProgress, submitAttempt, useTest } from "../data.ts";
-import { askTutor, go } from "../router.ts";
+import { askTutor, exitTest, go } from "../router.ts";
 import { findEvidence, PassageView, type Highlight } from "./Passage.tsx";
 import { QuestionsView } from "./Questions.tsx";
 import { Results } from "./Results.tsx";
@@ -125,13 +125,13 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   const evidenceItem = evidenceQ && review ? review.get(evidenceQ) : null;
   const evidence = evidenceItem ? evidenceItem.key.evidence.map((e) => findEvidence(passage.paragraphs, e)).find(Boolean) ?? null : null;
   const unanswered = allQs.filter((q) => !(responses[q] ?? "").trim()).length;
-  const exit = () => go(data!.conversationId ? { name: "chat", id: data!.conversationId } : { name: "tests" });
+  const exit = () => exitTest(data!.conversationId ? { name: "chat", id: data!.conversationId } : { name: "tests" });
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-paper">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-rule bg-surface px-4">
         <button onClick={exit} className="rounded-md px-2 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink">
-          {reviewing ? (data!.conversationId ? "Back to chat" : "Back to tests") : "Save and exit"}
+          {reviewing ? "Back" : "Save and exit"}
         </button>
         <p className="min-w-0 flex-1 truncate text-center font-serif text-[16px] font-semibold text-ink">{test.title}</p>
         {reviewing ? (

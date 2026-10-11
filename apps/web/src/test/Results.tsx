@@ -1,6 +1,6 @@
 import { ScoreSummary } from "../components/ScoreSummary.tsx";
 import type { TestPayload } from "../data.ts";
-import { go } from "../router.ts";
+import { exitTest, go } from "../router.ts";
 
 export function Results({ data }: { data: TestPayload }) {
   const { test, attempt } = data;
@@ -9,10 +9,10 @@ export function Results({ data }: { data: TestPayload }) {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-paper">
       <header className="flex h-14 items-center border-b border-rule bg-surface px-4">
         <button
-          onClick={() => go(data.conversationId ? { name: "chat", id: data.conversationId } : { name: "tests" })}
+          onClick={() => exitTest(data.conversationId ? { name: "chat", id: data.conversationId } : { name: "tests" })}
           className="rounded-md px-2 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
         >
-          {data.conversationId ? "Back to chat" : "Back to tests"}
+          Back
         </button>
       </header>
       <main className="mx-auto max-w-[640px] px-6 py-12">

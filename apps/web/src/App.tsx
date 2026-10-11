@@ -17,7 +17,12 @@ export function App() {
   const [drawer, setDrawer] = useState(false);
   const [search, setSearch] = useState(false);
   const [creating, setCreating] = useState(false);
-  const firstMessage = useRef<string | null>(null);
+  // The first message of a chat created from the home composer. Tied to that chat's id and
+  // dropped once the learner goes anywhere else, so it can never be re-sent to another chat.
+  const firstMessage = useRef<{ id: string; text: string } | null>(null);
+  useEffect(() => {
+    if (firstMessage.current && !(route.name === "chat" && route.id === firstMessage.current.id)) firstMessage.current = null;
+  }, [route]);
   const [sidebarOpen, setSidebarOpen] = useState(() => stored("sidebar:open", "1") === "1");
   const [sidebarWidth, setSidebarWidth] = useState(() => Number(stored("sidebar:width", "264")) || 264);
   const desktop = () => window.matchMedia("(min-width: 768px)").matches;
@@ -66,7 +71,7 @@ export function App() {
     setCreating(true);
     try {
       const id = await createConversation();
-      firstMessage.current = raw;
+      firstMessage.current = { id, text: raw };
       go({ name: "chat", id });
     } finally {
       setCreating(false);
@@ -110,7 +115,7 @@ export function App() {
         )}
         <div className="min-h-0 flex-1">
           {route.name === "chat" && (
-            <Chat key={route.id} conversationId={route.id} initial={firstMessage} />
+            <Chat key={route.id} conversationId={route.id} initial={{ current: firstMessage.current?.id === route.id ? firstMessage.current.text : null }} />
           )}
           {route.name === "home" && (
             <div className="flex h-full items-center justify-center overflow-y-auto px-4 sm:px-8">

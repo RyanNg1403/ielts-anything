@@ -53,6 +53,22 @@ export function go(route: Route) {
   location.hash = href(route);
 }
 
+// Remember the last place outside a test, so leaving a test returns the learner there.
+if (typeof window !== "undefined") {
+  const remember = () => {
+    if (!location.hash.startsWith("#/test/")) sessionStorage.setItem("lastRoute", location.hash || "#/");
+  };
+  remember();
+  window.addEventListener("hashchange", remember);
+}
+
+/** Where "Save and exit" / "Back" in a test should go. */
+export function exitTest(fallback: Route) {
+  const last = sessionStorage.getItem("lastRoute");
+  if (last && !last.startsWith("#/test/")) location.hash = last;
+  else go(fallback);
+}
+
 export function useRoute(): Route {
   const [route, setRoute] = useState(() => parse(location.hash));
   useEffect(() => {

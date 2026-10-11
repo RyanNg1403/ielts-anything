@@ -96,6 +96,8 @@ function toolStep(item: any, status: Step["status"]): Step | null {
       return { id, kind: "done", label: "Showed your score", status };
     case "show_test":
       return { id, kind: "done", label: "Brought up the test", status };
+    case "start_test":
+      return { id, kind: "done", label: "Opened the test", status };
   }
   return { id, kind: "other", label: item.tool, status };
 }
