@@ -1,0 +1,62 @@
+[
+  {
+    "name": "v3-spruce-british",
+    "voice": "spruce",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  },
+  {
+    "name": "v3-juniper-british",
+    "voice": "juniper",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  },
+  {
+    "name": "v3-maple-british",
+    "voice": "maple",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  },
+  {
+    "name": "v3-arbor-british",
+    "voice": "arbor",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  },
+  {
+    "name": "v3-cove-british",
+    "voice": "cove",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  },
+  {
+    "name": "v3-sol-british",
+    "voice": "sol",
+    "version": "v3",
+    "mode": "audio",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When asked to repeat a line, say only that line, word for word.",
+    "text": "",
+    "timeoutMs": 30000,
+    "tailMs": 9000
+  }
+]

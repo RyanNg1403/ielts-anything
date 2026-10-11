@@ -1,0 +1,34 @@
+[
+  {
+    "name": "v3-spruce-speech",
+    "voice": "spruce",
+    "mode": "speech",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. Read exactly the text you are given, word for word. Never add, remove or comment on anything.",
+    "text": "Good morning, Riverside Sports Centre. How can I help you?",
+    "version": "v3"
+  },
+  {
+    "name": "v3-juniper-speech",
+    "voice": "juniper",
+    "mode": "speech",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. Read exactly the text you are given, word for word. Never add, remove or comment on anything.",
+    "text": "Hi, yes. I'd like to join the swimming club. My surname is Fitzgerald, that's F-I-T-Z-G-E-R-A-L-D, and my postcode is BS8 4QR.",
+    "version": "v3"
+  },
+  {
+    "name": "v3-arbor-text",
+    "voice": "arbor",
+    "mode": "text",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When the user sends a line, read it aloud exactly, word for word, and say nothing else.",
+    "text": "Certainly. The membership costs forty-two pounds fifty a month, or four hundred and twenty pounds if you pay for the whole year.",
+    "version": "v3"
+  },
+  {
+    "name": "v3-maple-text",
+    "voice": "maple",
+    "mode": "text",
+    "prompt": "You are a voice actor recording an IELTS listening test. Speak with a standard Southern British English (RP) accent. When the user sends a line, read it aloud exactly, word for word, and say nothing else.",
+    "text": "Oh, sorry, I said Tuesday, but actually Thursday evenings would suit me better.",
+    "version": "v3"
+  }
+]

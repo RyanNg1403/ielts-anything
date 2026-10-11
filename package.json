@@ -1,0 +1,26 @@
+{
+  "name": "ielts-anything",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @ielts/server\" \"npm run dev -w @ielts/web\"",
+    "build": "npm run build -w @ielts/web",
+    "typecheck": "tsc -p packages/spec && tsc -p apps/server && tsc -p apps/web",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "concurrently": "10.0.6",
+    "playwright-core": "^1.64.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
