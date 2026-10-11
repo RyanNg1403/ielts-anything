@@ -90,6 +90,7 @@ function entryFromToolCall(item: any): Entry | null {
   switch (item.tool) {
     case "show_brief":
       return { kind: "card", id: item.id, card: { kind: "brief", ...args } };
+    case "start_test":
     case "show_test":
       return item.success ? { kind: "card", id: item.id, card: { kind: "test", testId: args.testId } } : null;
     case "show_score":
@@ -260,6 +261,10 @@ export function useConversation(conversationId: string | null, initial?: { curre
           });
         case "card":
           return setEntries((xs) => [...xs, { kind: "card", id: crypto.randomUUID(), card: e.card }]);
+        case "open":
+          // The tutor started a test: switch to it (live events only, never on history replay).
+          if (e.route?.name === "test") location.hash = `#/test/${e.route.id}`;
+          return;
         case "error":
           if (e.willRetry) return;
           return setEntries((xs) => [...xs, { kind: "error", id: crypto.randomUUID(), message: e.message }]);
@@ -296,7 +301,11 @@ export function useConversation(conversationId: string | null, initial?: { curre
 
   const interrupt = useCallback(() => post({ type: "interrupt" }), [post]);
 
-  return { entries, busy, activity, send, answer, interrupt };
+  const markAnswered = useCallback((id: string, answers: Record<string, string[]>) => {
+    setEntries((xs) => xs.map((x) => (x.kind === "ask" && x.id === id ? { ...x, answers } : x)));
+  }, []);
+
+  return { entries, busy, activity, send, answer, interrupt, markAnswered };
 }
 
 /** Start a new chat and send a first message (e.g. "Make me a drill on ..."). */

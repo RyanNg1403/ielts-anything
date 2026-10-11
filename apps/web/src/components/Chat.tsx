@@ -9,7 +9,7 @@ import { WorkLog } from "./WorkLog.tsx";
 import { MentionText } from "./MentionInput.tsx";
 
 export function Chat({ conversationId, initial }: { conversationId: string; initial: { current: string | null } }) {
-  const { entries, busy, activity, send, answer, interrupt } = useConversation(conversationId, initial);
+  const { entries, busy, activity, send, answer, interrupt, markAnswered } = useConversation(conversationId, initial);
   const end = useRef<HTMLDivElement>(null);
 
   // "Ask the tutor" buttons elsewhere leave a message to send when this chat opens.
@@ -49,7 +49,16 @@ export function Chat({ conversationId, initial }: { conversationId: string; init
                 case "agent":
                   return <Markdown key={e.id} text={e.text} />;
                 case "ask":
-                  return <AskCard key={e.id} questions={e.questions} answers={e.answers} onSubmit={e.askId ? (a) => answer(e.askId!, a) : undefined} />;
+                  return (
+                    <AskCard
+                      key={e.id}
+                      questions={e.questions}
+                      answers={e.answers}
+                      // If nobody is waiting on this card any more (e.g. the app restarted), send the
+                      // choices as a normal message so the card never goes dead.
+                      onSubmit={e.askId ? (a) => answer(e.askId!, a) : (a) => (markAnswered(e.id, a), send(answersAsText(e.questions, a)))}
+                    />
+                  );
                 case "card":
                   switch (e.card.kind) {
                     case "brief":
@@ -91,4 +100,8 @@ export function Chat({ conversationId, initial }: { conversationId: string; init
       </div>
     </ChatActions.Provider>
   );
+}
+
+function answersAsText(questions: { id: string; header: string }[], answers: Record<string, string[]>) {
+  return questions.map((q) => `${q.header}: ${(answers[q.id] ?? []).join(", ")}`).join("\n");
 }

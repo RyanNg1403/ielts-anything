@@ -97,4 +97,18 @@ export const explainQuestions = defineTool({
   },
 });
 
-export const reviewTools = [listTests, getTestResult, showTest, showScore, explainQuestions];
+export const startTest = defineTool({
+  name: "start_test",
+  description:
+    "Open a test for the learner to take right now (or continue, or see results if already scored). Use when they ask to start, begin, take, continue or do a test. " +
+    "The app switches the learner's screen to the test, so reply with at most one short sentence.",
+  input: z.object({ testId: z.string() }),
+  async run({ testId }, ctx) {
+    if (!tests.get(testId)) return { success: false, text: "No test with that id. Call list_tests." };
+    ctx.emit({ type: "open", route: { name: "test", id: testId } });
+    ctx.emit({ type: "card", card: { kind: "test", testId } });
+    return { text: attempts.latest(testId) ? "Opened the results (the test was already submitted)." : "Opened the test on the learner's screen." };
+  },
+});
+
+export const reviewTools = [startTest, listTests, getTestResult, showTest, showScore, explainQuestions];
