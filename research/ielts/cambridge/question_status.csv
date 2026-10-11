@@ -1,0 +1,411 @@
+book,test,q,family,answer,source
+12,1,1,TFNG,NOT GIVEN,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,2,TFNG,FALSE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,3,TFNG,FALSE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,4,TFNG,TRUE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,5,TFNG,TRUE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,22,TFNG,NOT GIVEN,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,23,TFNG,FALSE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,24,TFNG,NOT GIVEN,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,25,TFNG,TRUE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,26,TFNG,TRUE,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,37,YNNG,NOT GIVEN,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,38,YNNG,YES,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,39,YNNG,NO,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,1,40,YNNG,NO,Cambridge 12 answer key p.117; Ppo R89 cross-check
+12,2,21,TFNG,TRUE,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,22,TFNG,FALSE,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,23,TFNG,FALSE,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,24,TFNG,NOT GIVEN,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,32,YNNG,YES,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,33,YNNG,NOT GIVEN,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,34,YNNG,NO,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,35,YNNG,NO,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,2,36,YNNG,NOT GIVEN,Cambridge 12 answer key p.119; Ppo R90 cross-check
+12,4,9,TFNG,TRUE,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,10,TFNG,FALSE,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,11,TFNG,NOT GIVEN,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,12,TFNG,TRUE,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,13,TFNG,FALSE,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,23,YNNG,NO,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,24,YNNG,NOT GIVEN,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,25,YNNG,YES,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,26,YNNG,YES,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,34,YNNG,YES,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,35,YNNG,NOT GIVEN,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,36,YNNG,NO,Cambridge 12 answer key p.123; Ppo R92 cross-check
+12,4,37,YNNG,NO,Cambridge 12 answer key p.123; Ppo R92 cross-check
+13,1,8,TFNG,FALSE,Cambridge 13 answer key p.119; Q8 checked against complete local PDF
+13,1,9,TFNG,NOT GIVEN,Cambridge 13 answer key p.119
+13,1,10,TFNG,FALSE,Cambridge 13 answer key p.119
+13,1,11,TFNG,TRUE,Cambridge 13 answer key p.119
+13,1,12,TFNG,NOT GIVEN,Cambridge 13 answer key p.119
+13,1,13,TFNG,TRUE,Cambridge 13 answer key p.119
+13,1,38,YNNG,YES,Cambridge 13 answer key p.119
+13,1,39,YNNG,NOT GIVEN,Cambridge 13 answer key p.119
+13,1,40,YNNG,NO,Cambridge 13 answer key p.119
+13,2,10,TFNG,TRUE,Cambridge 13 answer key p.121; Ppo R106 cross-check
+13,2,11,TFNG,FALSE,Cambridge 13 answer key p.121; Ppo R106 cross-check
+13,2,12,TFNG,NOT GIVEN,Cambridge 13 answer key p.121; Ppo R106 cross-check
+13,2,13,TFNG,FALSE,Cambridge 13 answer key p.121; Ppo R106 cross-check
+13,3,9,TFNG,FALSE,Cambridge 13 answer key p.123; Ppo R107 cross-check
+13,3,10,TFNG,FALSE,Cambridge 13 answer key p.123; Ppo R107 cross-check
+13,3,11,TFNG,NOT GIVEN,Cambridge 13 answer key p.123; Ppo R107 cross-check
+13,3,12,TFNG,TRUE,Cambridge 13 answer key p.123; Ppo R107 cross-check
+13,3,13,TFNG,NOT GIVEN,Cambridge 13 answer key p.123; Ppo R107 cross-check
+13,4,1,TFNG,FALSE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,2,TFNG,FALSE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,3,TFNG,TRUE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,4,TFNG,TRUE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,5,TFNG,FALSE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,6,TFNG,TRUE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,7,TFNG,NOT GIVEN,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,8,TFNG,TRUE,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,35,YNNG,YES,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,36,YNNG,NOT GIVEN,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,37,YNNG,NO,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,38,YNNG,NOT GIVEN,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,39,YNNG,YES,Cambridge 13 answer key p.125; Ppo R108 cross-check
+13,4,40,YNNG,NO,Cambridge 13 answer key p.125; Ppo R108 cross-check
+14,1,9,TFNG,TRUE,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,10,TFNG,TRUE,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,11,TFNG,NOT GIVEN,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,12,TFNG,FALSE,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,13,TFNG,TRUE,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,32,YNNG,YES,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,33,YNNG,NO,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,34,YNNG,NO,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,1,35,YNNG,NOT GIVEN,Cambridge 14 answer key p.120; Ppo R128 cross-check
+14,2,1,TFNG,FALSE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,2,TFNG,TRUE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,3,TFNG,NOT GIVEN,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,4,TFNG,FALSE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,5,TFNG,NOT GIVEN,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,6,TFNG,TRUE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,7,TFNG,FALSE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,8,TFNG,TRUE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,38,TFNG,TRUE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,39,TFNG,FALSE,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,2,40,TFNG,NOT GIVEN,Cambridge 14 answer key p.122; Ppo R129 cross-check
+14,3,4,YNNG,NOT GIVEN,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,5,YNNG,NO,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,6,YNNG,YES,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,32,YNNG,NO,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,33,YNNG,YES,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,34,YNNG,NOT GIVEN,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,35,YNNG,NO,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,3,36,YNNG,YES,Cambridge 14 answer key p.124; Ppo R130 cross-check
+14,4,9,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,10,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,11,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,12,TFNG,NOT GIVEN,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,13,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,18,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,19,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,20,TFNG,NOT GIVEN,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,21,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,22,TFNG,NOT GIVEN,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,27,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,28,TFNG,NOT GIVEN,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,29,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,30,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,31,TFNG,FALSE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,32,TFNG,TRUE,Cambridge 14 answer key p.126; Ppo R131 cross-check
+14,4,33,TFNG,NOT GIVEN,Cambridge 14 answer key p.126; Ppo R131 cross-check
+15,1,5,TFNG,FALSE,Cambridge 15 answer key p.120; Ppo R222 cross-check
+15,1,6,TFNG,NOT GIVEN,Cambridge 15 answer key p.120; Ppo R222 cross-check
+15,1,7,TFNG,TRUE,Cambridge 15 answer key p.120; Ppo R222 cross-check
+15,2,37,YNNG,NOT GIVEN,Cambridge 15 answer key p.122; Ppo R223 cross-check
+15,2,38,YNNG,YES,Cambridge 15 answer key p.122; Ppo R223 cross-check
+15,2,39,YNNG,NO,Cambridge 15 answer key p.122; Ppo R223 cross-check
+15,2,40,YNNG,NO,Cambridge 15 answer key p.122; Ppo R223 cross-check
+15,3,1,TFNG,TRUE,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,2,TFNG,FALSE,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,3,TFNG,NOT GIVEN,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,4,TFNG,TRUE,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,5,TFNG,NOT GIVEN,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,6,TFNG,FALSE,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,3,7,TFNG,TRUE,Cambridge 15 answer key p.124; Ppo R224 cross-check
+15,4,9,TFNG,NOT GIVEN,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,10,TFNG,FALSE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,11,TFNG,TRUE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,12,TFNG,FALSE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,13,TFNG,NOT GIVEN,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,14,TFNG,NOT GIVEN,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,15,TFNG,FALSE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,16,TFNG,TRUE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,17,TFNG,FALSE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,18,TFNG,FALSE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,19,TFNG,TRUE,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,35,YNNG,YES,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,36,YNNG,NOT GIVEN,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,37,YNNG,NO,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,38,YNNG,YES,Cambridge 15 answer key p.126; Ppo R225 cross-check
+15,4,39,YNNG,NOT GIVEN,Cambridge 15 answer key p.126; Ppo R225 cross-check
+16,1,1,TFNG,FALSE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,2,TFNG,FALSE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,3,TFNG,NOT GIVEN,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,4,TFNG,TRUE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,5,TFNG,TRUE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,6,TFNG,FALSE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,1,7,TFNG,TRUE,Cambridge 16 answer key p.122; Ppo R226 cross-check
+16,2,1,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,2,TFNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,3,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,4,TFNG,FALSE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,5,TFNG,FALSE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,6,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,7,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,8,TFNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,21,YNNG,YES,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,22,YNNG,NO,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,23,YNNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,24,YNNG,YES,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,25,YNNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,26,YNNG,NO,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,36,TFNG,FALSE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,37,TFNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,38,TFNG,NOT GIVEN,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,39,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,2,40,TFNG,TRUE,Cambridge 16 answer key p.124; Ppo R227 cross-check
+16,3,1,TFNG,FALSE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,2,TFNG,NOT GIVEN,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,3,TFNG,FALSE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,4,TFNG,TRUE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,5,TFNG,TRUE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,27,TFNG,NOT GIVEN,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,28,TFNG,TRUE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,29,TFNG,TRUE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,30,TFNG,NOT GIVEN,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,31,TFNG,FALSE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,3,32,TFNG,FALSE,Cambridge 16 answer key p.126; Ppo R228 cross-check
+16,4,7,TFNG,FALSE,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,8,TFNG,NOT GIVEN,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,9,TFNG,FALSE,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,10,TFNG,TRUE,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,23,YNNG,YES,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,24,YNNG,NO,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,25,YNNG,NOT GIVEN,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,26,YNNG,YES,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,36,YNNG,NO,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,37,YNNG,NOT GIVEN,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,38,YNNG,YES,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,39,YNNG,NO,Cambridge 16 answer key p.128; Ppo R229 cross-check
+16,4,40,YNNG,YES,Cambridge 16 answer key p.128; Ppo R229 cross-check
+17,1,7,TFNG,FALSE,Cambridge 17 answer key p.120
+17,1,8,TFNG,NOT GIVEN,Cambridge 17 answer key p.120
+17,1,9,TFNG,TRUE,Cambridge 17 answer key p.120
+17,1,10,TFNG,TRUE,Cambridge 17 answer key p.120
+17,1,11,TFNG,FALSE,Cambridge 17 answer key p.120
+17,1,12,TFNG,FALSE,Cambridge 17 answer key p.120
+17,1,13,TFNG,NOT GIVEN,Cambridge 17 answer key p.120
+17,1,32,YNNG,NOT GIVEN,Cambridge 17 answer key p.120
+17,1,33,YNNG,NO,Cambridge 17 answer key p.120
+17,1,34,YNNG,NO,Cambridge 17 answer key p.120
+17,1,35,YNNG,YES,Cambridge 17 answer key p.120
+17,2,6,TFNG,NOT GIVEN,Cambridge 17 answer key p.122
+17,2,7,TFNG,FALSE,Cambridge 17 answer key p.122
+17,2,8,TFNG,TRUE,Cambridge 17 answer key p.122
+17,2,9,TFNG,TRUE,Cambridge 17 answer key p.122
+17,2,10,TFNG,FALSE,Cambridge 17 answer key p.122
+17,2,11,TFNG,FALSE,Cambridge 17 answer key p.122
+17,2,12,TFNG,TRUE,Cambridge 17 answer key p.122
+17,2,13,TFNG,NOT GIVEN,Cambridge 17 answer key p.122
+17,2,32,YNNG,NO,Cambridge 17 answer key p.122
+17,2,33,YNNG,NOT GIVEN,Cambridge 17 answer key p.122
+17,2,34,YNNG,YES,Cambridge 17 answer key p.122
+17,2,35,YNNG,NO,Cambridge 17 answer key p.122
+17,2,36,YNNG,NOT GIVEN,Cambridge 17 answer key p.122
+17,3,6,TFNG,TRUE,Cambridge 17 answer key p.124
+17,3,7,TFNG,FALSE,Cambridge 17 answer key p.124
+17,3,8,TFNG,NOT GIVEN,Cambridge 17 answer key p.124
+17,3,9,TFNG,FALSE,Cambridge 17 answer key p.124
+17,3,10,TFNG,NOT GIVEN,Cambridge 17 answer key p.124
+17,3,11,TFNG,FALSE,Cambridge 17 answer key p.124
+17,3,12,TFNG,TRUE,Cambridge 17 answer key p.124
+17,3,13,TFNG,NOT GIVEN,Cambridge 17 answer key p.124
+17,3,32,YNNG,NO,Cambridge 17 answer key p.124
+17,3,33,YNNG,YES,Cambridge 17 answer key p.124
+17,3,34,YNNG,NOT GIVEN,Cambridge 17 answer key p.124
+17,3,35,YNNG,NO,Cambridge 17 answer key p.124
+17,4,1,TFNG,FALSE,Cambridge 17 answer key p.126
+17,4,2,TFNG,FALSE,Cambridge 17 answer key p.126
+17,4,3,TFNG,NOT GIVEN,Cambridge 17 answer key p.126
+17,4,4,TFNG,TRUE,Cambridge 17 answer key p.126
+17,4,5,TFNG,NOT GIVEN,Cambridge 17 answer key p.126
+17,4,6,TFNG,TRUE,Cambridge 17 answer key p.126
+17,4,33,TFNG,FALSE,Cambridge 17 answer key p.126
+17,4,34,TFNG,NOT GIVEN,Cambridge 17 answer key p.126
+17,4,35,TFNG,NOT GIVEN,Cambridge 17 answer key p.126
+17,4,36,TFNG,TRUE,Cambridge 17 answer key p.126
+18,1,8,TFNG,TRUE,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,1,9,TFNG,NOT GIVEN,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,1,10,TFNG,FALSE,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,1,11,TFNG,TRUE,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,1,12,TFNG,FALSE,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,1,13,TFNG,NOT GIVEN,Cambridge 18 answer key p.120; Ppo R268 cross-check
+18,2,9,TFNG,TRUE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,10,TFNG,FALSE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,11,TFNG,FALSE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,12,TFNG,TRUE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,13,TFNG,NOT GIVEN,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,20,YNNG,YES,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,21,YNNG,NOT GIVEN,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,22,YNNG,NO,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,23,YNNG,YES,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,27,TFNG,NOT GIVEN,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,28,TFNG,NOT GIVEN,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,29,TFNG,TRUE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,30,TFNG,FALSE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,31,TFNG,TRUE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,32,TFNG,NOT GIVEN,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,2,33,TFNG,FALSE,Cambridge 18 answer key p.122; Ppo R269 cross-check
+18,3,36,YNNG,NO,Cambridge 18 answer key p.124; Ppo R270 cross-check
+18,3,37,YNNG,NOT GIVEN,Cambridge 18 answer key p.124; Ppo R270 cross-check
+18,3,38,YNNG,YES,Cambridge 18 answer key p.124; Ppo R270 cross-check
+18,3,39,YNNG,NO,Cambridge 18 answer key p.124; Ppo R270 cross-check
+18,3,40,YNNG,NOT GIVEN,Cambridge 18 answer key p.124; Ppo R270 cross-check
+18,4,23,YNNG,YES,Cambridge 18 answer key p.126
+18,4,24,YNNG,NO,Cambridge 18 answer key p.126
+18,4,25,YNNG,NOT GIVEN,Cambridge 18 answer key p.126
+18,4,26,YNNG,YES,Cambridge 18 answer key p.126
+18,4,27,YNNG,YES,Cambridge 18 answer key p.126
+18,4,28,YNNG,NOT GIVEN,Cambridge 18 answer key p.126
+18,4,29,YNNG,NO,Cambridge 18 answer key p.126
+18,4,30,YNNG,NO,Cambridge 18 answer key p.126
+19,1,1,TFNG,FALSE,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,2,TFNG,FALSE,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,3,TFNG,NOT GIVEN,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,4,TFNG,FALSE,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,5,TFNG,NOT GIVEN,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,6,TFNG,TRUE,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,7,TFNG,TRUE,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,37,YNNG,YES,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,38,YNNG,NOT GIVEN,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,39,YNNG,NO,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,1,40,YNNG,NOT GIVEN,Cambridge 19 answer key p.121; Ppo R292 cross-check
+19,2,8,TFNG,NOT GIVEN,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,9,TFNG,FALSE,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,10,TFNG,NOT GIVEN,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,11,TFNG,TRUE,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,12,TFNG,TRUE,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,13,TFNG,NOT GIVEN,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,33,YNNG,YES,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,34,YNNG,NOT GIVEN,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,35,YNNG,YES,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,36,YNNG,NOT GIVEN,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,2,37,YNNG,NO,Cambridge 19 answer key p.123; Ppo R293 cross-check
+19,3,1,TFNG,FALSE,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,2,TFNG,FALSE,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,3,TFNG,TRUE,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,4,TFNG,NOT GIVEN,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,5,TFNG,TRUE,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,6,TFNG,NOT GIVEN,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,7,TFNG,FALSE,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,35,YNNG,NO,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,36,YNNG,YES,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,37,YNNG,NO,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,38,YNNG,NOT GIVEN,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,39,YNNG,NOT GIVEN,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,3,40,YNNG,YES,Cambridge 19 answer key p.125; Ppo R294 cross-check
+19,4,1,TFNG,FALSE,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,2,TFNG,TRUE,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,3,TFNG,FALSE,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,4,TFNG,NOT GIVEN,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,5,TFNG,FALSE,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,6,TFNG,TRUE,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,36,YNNG,NOT GIVEN,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,37,YNNG,NO,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,38,YNNG,YES,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,39,YNNG,NOT GIVEN,Cambridge 19 answer key p.127; Ppo R295 cross-check
+19,4,40,YNNG,NO,Cambridge 19 answer key p.127; Ppo R295 cross-check
+20,1,1,TFNG,FALSE,Ppo R310 answer key
+20,1,2,TFNG,FALSE,Ppo R310 answer key
+20,1,3,TFNG,FALSE,Ppo R310 answer key
+20,1,4,TFNG,NOT GIVEN,Ppo R310 answer key
+20,1,5,TFNG,TRUE,Ppo R310 answer key
+20,1,6,TFNG,TRUE,Ppo R310 answer key
+20,1,36,YNNG,YES,Ppo R310 answer key
+20,1,37,YNNG,NOT GIVEN,Ppo R310 answer key
+20,1,38,YNNG,NO,Ppo R310 answer key
+20,1,39,YNNG,YES,Ppo R310 answer key
+20,1,40,YNNG,YES,Ppo R310 answer key
+20,2,7,TFNG,TRUE,Ppo R311 answer key
+20,2,8,TFNG,NOT GIVEN,Ppo R311 answer key
+20,2,9,TFNG,FALSE,Ppo R311 answer key
+20,2,10,TFNG,NOT GIVEN,Ppo R311 answer key
+20,2,11,TFNG,TRUE,Ppo R311 answer key
+20,2,12,TFNG,NOT GIVEN,Ppo R311 answer key
+20,2,13,TFNG,TRUE,Ppo R311 answer key
+20,2,27,YNNG,NO,Ppo R311 answer key
+20,2,28,YNNG,YES,Ppo R311 answer key
+20,2,29,YNNG,NOT GIVEN,Ppo R311 answer key
+20,2,30,YNNG,NO,Ppo R311 answer key
+20,2,31,YNNG,NOT GIVEN,Ppo R311 answer key
+20,2,32,YNNG,YES,Ppo R311 answer key
+20,3,8,TFNG,NOT GIVEN,Ppo R312 answer key
+20,3,9,TFNG,TRUE,Ppo R312 answer key
+20,3,10,TFNG,FALSE,Ppo R312 answer key
+20,3,11,TFNG,TRUE,Ppo R312 answer key
+20,3,12,TFNG,FALSE,Ppo R312 answer key
+20,3,13,TFNG,NOT GIVEN,Ppo R312 answer key
+20,4,8,TFNG,FALSE,Ppo R313 answer key
+20,4,9,TFNG,TRUE,Ppo R313 answer key
+20,4,10,TFNG,FALSE,Ppo R313 answer key
+20,4,11,TFNG,TRUE,Ppo R313 answer key
+20,4,12,TFNG,NOT GIVEN,Ppo R313 answer key
+20,4,13,TFNG,NOT GIVEN,Ppo R313 answer key
+21,1,8,TFNG,TRUE,Ppo R316 answer key
+21,1,9,TFNG,NOT GIVEN,Ppo R316 answer key
+21,1,10,TFNG,FALSE,Ppo R316 answer key
+21,1,11,TFNG,NOT GIVEN,Ppo R316 answer key
+21,1,12,TFNG,TRUE,Ppo R316 answer key
+21,1,13,TFNG,TRUE,Ppo R316 answer key
+21,1,37,YNNG,YES,Ppo R316 answer key
+21,1,38,YNNG,NOT GIVEN,Ppo R316 answer key
+21,1,39,YNNG,NO,Ppo R316 answer key
+21,1,40,YNNG,YES,Ppo R316 answer key
+21,2,6,TFNG,TRUE,Ppo R317 answer key
+21,2,7,TFNG,FALSE,Ppo R317 answer key
+21,2,8,TFNG,NOT GIVEN,Ppo R317 answer key
+21,2,9,TFNG,FALSE,Ppo R317 answer key
+21,2,10,TFNG,TRUE,Ppo R317 answer key
+21,2,11,TFNG,FALSE,Ppo R317 answer key
+21,2,12,TFNG,NOT GIVEN,Ppo R317 answer key
+21,2,13,TFNG,NOT GIVEN,Ppo R317 answer key
+21,2,36,YNNG,NO,Ppo R317 answer key
+21,2,37,YNNG,NOT GIVEN,Ppo R317 answer key
+21,2,38,YNNG,NO,Ppo R317 answer key
+21,2,39,YNNG,YES,Ppo R317 answer key
+21,3,8,TFNG,FALSE,Ppo R318 answer key
+21,3,9,TFNG,FALSE,Ppo R318 answer key
+21,3,10,TFNG,TRUE,Ppo R318 answer key
+21,3,11,TFNG,NOT GIVEN,Ppo R318 answer key
+21,3,12,TFNG,TRUE,Ppo R318 answer key
+21,3,13,TFNG,NOT GIVEN,Ppo R318 answer key
+21,3,14,TFNG,NOT GIVEN,Ppo R318 answer key
+21,3,15,TFNG,FALSE,Ppo R318 answer key
+21,3,16,TFNG,NOT GIVEN,Ppo R318 answer key
+21,3,17,TFNG,TRUE,Ppo R318 answer key
+21,3,18,TFNG,FALSE,Ppo R318 answer key
+21,3,35,YNNG,NO,Ppo R318 answer key
+21,3,36,YNNG,NOT GIVEN,Ppo R318 answer key
+21,3,37,YNNG,NOT GIVEN,Ppo R318 answer key
+21,3,38,YNNG,YES,Ppo R318 answer key
+21,3,39,YNNG,YES,Ppo R318 answer key
+21,3,40,YNNG,NO,Ppo R318 answer key
+21,4,1,TFNG,TRUE,Ppo R319 answer key
+21,4,2,TFNG,FALSE,Ppo R319 answer key
+21,4,3,TFNG,TRUE,Ppo R319 answer key
+21,4,4,TFNG,NOT GIVEN,Ppo R319 answer key
+21,4,5,TFNG,NOT GIVEN,Ppo R319 answer key
+21,4,6,TFNG,FALSE,Ppo R319 answer key
+21,4,7,TFNG,TRUE,Ppo R319 answer key
+21,4,20,YNNG,NO,Ppo R319 answer key
+21,4,21,YNNG,NOT GIVEN,Ppo R319 answer key
+21,4,22,YNNG,YES,Ppo R319 answer key
+21,4,23,YNNG,NO,Ppo R319 answer key
+21,4,33,YNNG,NO,Ppo R319 answer key
+21,4,34,YNNG,NOT GIVEN,Ppo R319 answer key
+21,4,35,YNNG,NOT GIVEN,Ppo R319 answer key
+21,4,36,YNNG,YES,Ppo R319 answer key

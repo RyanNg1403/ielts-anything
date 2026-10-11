@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Literata", ui-serif, Georgia, serif;
+
+  --color-paper: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-ink: #16233b;
+  --color-ink-soft: #4a5874;
+  --color-ink-faint: #7d889c;
+  --color-rule: #dce2ec;
+  --color-rule-strong: #c3ccdb;
+  --color-primary: #1f3a68;
+  --color-primary-hover: #284a84;
+  --color-highlight: #ffe066;
+
+  --color-reading: #1f7a68;
+  --color-reading-wash: #e6f2ef;
+  --color-listening: #5a4fcf;
+  --color-listening-wash: #eceafb;
+  --color-writing: #b26b00;
+  --color-writing-wash: #f8eedd;
+  --color-speaking: #c0396b;
+  --color-speaking-wash: #f9e7ee;
+
+  --color-danger: #b42318;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* A highlighter stroke: used only where something is marked for the learner. */
+.marked {
+  background: linear-gradient(transparent 55%, var(--color-highlight) 55%, var(--color-highlight) 92%, transparent 92%);
+}

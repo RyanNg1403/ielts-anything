@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Copyrighted Cambridge IELTS books and their extractions: local reference only, never publish
+cam books/
+corpus/
+
+# Local tooling
+.venv/
+spikes/*/out/
+
+# Downloaded third-party evidence (official sample PDFs, page renders): keep local
+research/**/.evidence/
+# Generated protocol bindings: regenerate with `codex app-server generate-ts --experimental`
+research/codex-protocol/
+
+# Dependencies and local run artifacts
+node_modules/
+dist/
+.shots/
+*.log
