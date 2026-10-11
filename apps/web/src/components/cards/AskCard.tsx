@@ -17,9 +17,8 @@ export function AskCard({
 
   if (done) {
     return (
-      <div className="rounded-xl border border-rule bg-surface px-5 py-4">
-        <p className="text-sm text-ink-soft">You chose</p>
-        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
+      <div className="rounded-2xl border border-rule bg-surface px-5 py-4 shadow-[var(--shadow-card)]">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
           {questions.map((q) => (
             <div key={q.id} className="contents">
               <dt className="text-ink-soft">{q.header}</dt>
@@ -48,11 +47,11 @@ export function AskCard({
   const complete = questions.every((q) => (final[q.id] ?? []).length > 0);
 
   return (
-    <div className="rounded-xl border border-rule-strong bg-surface">
+    <div className="rounded-2xl border border-rule bg-surface shadow-[var(--shadow-card)]">
       <div className="space-y-6 px-5 py-5">
         {questions.map((q, qi) => (
           <fieldset key={q.id}>
-            <legend className="font-serif text-[17px] font-semibold text-ink">
+            <legend className="font-serif text-[19px] font-medium text-ink">
               {questions.length > 1 && <span className="mr-2 text-ink-faint">{qi + 1}.</span>}
               {q.question}
             </legend>
@@ -65,8 +64,8 @@ export function AskCard({
                     key={o.label}
                     onClick={() => toggle(q, o.label)}
                     aria-pressed={on}
-                    className={`rounded-lg border px-3.5 py-2.5 text-left transition-colors ${
-                      on ? "border-primary bg-[#eef2f9] ring-1 ring-primary" : "border-rule hover:border-rule-strong"
+                    className={`rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                      on ? "border-ink bg-selected" : "border-rule hover:border-rule-strong hover:bg-paper"
                     }`}
                   >
                     <span className="block text-sm font-medium text-ink">{o.label}</span>
@@ -74,37 +73,37 @@ export function AskCard({
                   </button>
                 );
               })}
-              {q.allowOther && (
-                <label
-                  className={`flex items-center gap-2 rounded-lg border px-3.5 py-2 ${
-                    picked[q.id]?.includes("__other") ? "border-primary ring-1 ring-primary" : "border-dashed border-rule-strong"
-                  }`}
-                >
-                  <span className="text-sm text-ink-soft">Other</span>
-                  <input
-                    value={other[q.id] ?? ""}
-                    onChange={(e) => {
-                      setOther((o) => ({ ...o, [q.id]: e.target.value }));
-                      setPicked((p) => {
-                        const cur = (p[q.id] ?? []).filter((x) => x !== "__other");
-                        if (!e.target.value) return { ...p, [q.id]: cur };
-                        return { ...p, [q.id]: q.multiSelect ? [...cur, "__other"] : ["__other"] };
-                      });
-                    }}
-                    className="min-w-0 flex-1 bg-transparent text-sm focus:outline-none"
-                    placeholder="Type your own"
-                  />
-                </label>
-              )}
             </div>
+            {q.allowOther && (
+              <input
+                value={other[q.id] ?? ""}
+                aria-label={`Your own answer to: ${q.question}`}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setOther((o) => ({ ...o, [q.id]: v }));
+                  setPicked((p) => {
+                    const cur = (p[q.id] ?? []).filter((x) => x !== "__other");
+                    if (!v.trim()) return { ...p, [q.id]: cur };
+                    return { ...p, [q.id]: q.multiSelect ? [...cur, "__other"] : ["__other"] };
+                  });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && complete) onSubmit?.(final);
+                }}
+                placeholder="Or type your own"
+                className={`mt-2 h-11 w-full rounded-xl border bg-surface px-3.5 text-[15px] text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none ${
+                  picked[q.id]?.includes("__other") ? "border-ink" : "border-rule"
+                }`}
+              />
+            )}
           </fieldset>
         ))}
       </div>
-      <div className="flex justify-end border-t border-rule px-5 py-3">
+      <div className="flex justify-end px-5 pb-5">
         <button
           disabled={!complete}
           onClick={() => onSubmit?.(final)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-40"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-40"
         >
           Continue
         </button>

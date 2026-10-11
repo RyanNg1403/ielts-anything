@@ -748,14 +748,16 @@ def replace_required(old: str, new: str, text: str) -> str:
     return text.replace(old, new, 1)
 
 
-def replace_paragraph_start(text: str, prefix: str, replacement: str) -> str:
-    """Replace one Markdown paragraph identified by its opening text."""
-    pattern = re.compile(rf"^{re.escape(prefix)}.*$", re.MULTILINE)
-    match = pattern.search(text)
-    if not match:
-        message = f"Report paragraph not found: {prefix!r}"
+def replace_evidence_sentence(text: str, prefix: str, replacement: str) -> str:
+    """Replace one Cambridge evidence sentence and its trailing source link."""
+    start = text.find(prefix)
+    link = "[patterns.md](cambridge/patterns.md)"
+    link_end = text.find(link, start)
+    if start < 0 or link_end < 0:
+        message = f"Report evidence sentence not found: {prefix!r}"
         raise ValueError(message)
-    return text[: match.start()] + replacement + text[match.end() :]
+    end = link_end + len(link)
+    return text[:start] + replacement + text[end:]
 
 
 def regenerate_reports(
@@ -787,7 +789,7 @@ def regenerate_reports(
         status_table,
     )
     status_source_pattern = re.compile(
-        r"All \d+ status slots are classified across 40 tests\..*?"
+        r"All \d+ status slots are classified across 40 tests.*?"
         r"(?=\n\nThese distributions are descriptive)",
         re.DOTALL,
     )
@@ -824,8 +826,6 @@ def regenerate_reports(
         "Five status-split summaries in the corpus ledger were corrected by this recount.",
         patterns,
     )
-    PATTERNS_PATH.write_text(patterns)
-
     counts = status_counts(rows)
     tfng_total = sum(counts["TFNG"].values())
     ynng_total = sum(counts["YNNG"].values())
@@ -845,7 +845,7 @@ def regenerate_reports(
         f"across {p3_ynng[1]} tests. These are sample observations, not target quotas. "
         "[patterns.md](cambridge/patterns.md)"
     )
-    rules = replace_paragraph_start(
+    rules = replace_evidence_sentence(
         rules, "**Cambridge evidence:** Reading mixes", new_passage
     )
     old_status = re.search(
@@ -863,6 +863,7 @@ def regenerate_reports(
         f"{counts['YNNG']['YES']}/{counts['YNNG']['NO']}/{counts['YNNG']['NOT GIVEN']}"
     )
     rules = rules[: old_status.start()] + new_status + rules[old_status.end() :]
+    PATTERNS_PATH.write_text(patterns)
     RULES_PATH.write_text(rules)
 
 

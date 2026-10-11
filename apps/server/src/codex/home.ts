@@ -1,6 +1,6 @@
 // The app runs Codex with its own CODEX_HOME so IELTS threads stay out of the learner's
 // coding history, and their global AGENTS.md / memories do not leak into generated tests.
-import { existsSync, lstatSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,11 @@ export const WORKSPACE = join(APP_HOME, "workspace");
 export const USER_CODEX_HOME = process.env.CODEX_HOME ?? join(homedir(), ".codex");
 
 const CONFIG = `# Managed by ielts-anything. Edit model choices in the app's Settings instead.
+# Reasoning summaries feed the work log shown under each message.
+model_reasoning_summary = "detailed"
+# Live search so tests on recent events use current facts.
+web_search = "live"
+
 [features]
 memories = false
 apps = false
@@ -23,6 +28,11 @@ export function ensureCodexHome(): { loggedIn: boolean } {
   mkdirSync(WORKSPACE, { recursive: true });
   const config = join(CODEX_HOME, "config.toml");
   if (!existsSync(config)) writeFileSync(config, CONFIG);
+  // Older app homes: add settings introduced later, at the top (before any [table]).
+  for (const line of ['model_reasoning_summary = "detailed"', 'web_search = "live"']) {
+    const current = readFileSync(config, "utf8");
+    if (!current.includes(line.split(" ")[0]!)) writeFileSync(config, `${line}\n${current}`);
+  }
 
   const auth = join(CODEX_HOME, "auth.json");
   const userAuth = join(USER_CODEX_HOME, "auth.json");
