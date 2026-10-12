@@ -7,6 +7,7 @@ export type Route =
   | { name: "progress" }
   | { name: "sources" }
   | { name: "settings" }
+  | { name: "figures" }
   | { name: "test"; id: string; review: boolean; q: number | null; part: number | null };
 
 export function parse(hash: string): Route {
@@ -25,6 +26,10 @@ export function parse(hash: string): Route {
       return { name: "sources" };
     case "settings":
       return { name: "settings" };
+    case "dev":
+      // Development only: every Writing Task 1 figure kind, drawn from sample data.
+      if (parts[1] === "figures" && import.meta.env.DEV) return { name: "figures" };
+      break;
     case "test":
       if (parts[1]) return { name: "test", id: parts[1], review: parts[2] === "review", q: num("q"), part: num("part") };
   }
@@ -44,6 +49,8 @@ export function href(route: Route): string {
       const s = q.toString();
       return `#/test/${route.id}${route.review ? "/review" : ""}${s ? `?${s}` : ""}`;
     }
+    case "figures":
+      return "#/dev/figures";
     default:
       return `#/${route.name}`;
   }
