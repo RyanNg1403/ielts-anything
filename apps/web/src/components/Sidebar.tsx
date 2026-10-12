@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import type { Conversation } from "../api.ts";
 import { deleteConversation, renameConversation, useLibrary, useResource } from "../data.ts";
 import { go, type Route } from "../router.ts";
+import { ConfirmDialog } from "./ConfirmDialog.tsx";
 
-export type ConversationRow = Conversation & { score: string | null };
+export type ConversationRow = Conversation;
 
 export const useConversations = () => useResource<ConversationRow[]>("/api/conversations");
 
@@ -63,8 +63,9 @@ export function Sidebar({ route, onSearch, width, onCollapse }: { route: Route; 
   return (
     <nav aria-label="Main" style={{ width }} className="flex h-full shrink-0 flex-col border-r border-rule/70 bg-sidebar">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
-        <button onClick={() => go({ name: "home" })} className="truncate font-serif text-[20px] font-medium tracking-tight text-ink">
-          IELTS Anything
+        <button onClick={() => go({ name: "home" })} className="flex min-w-0 items-center gap-2.5 font-serif text-[20px] font-medium tracking-tight text-ink">
+          <img src="/branding/emblem-ielts-four-skills.svg" alt="" aria-hidden="true" className="size-7 shrink-0" />
+          <span className="truncate">IELTS Anything</span>
         </button>
         <SidebarToggle onClick={onCollapse} label="Hide sidebar (⌘B)" />
       </div>
@@ -165,7 +166,6 @@ function ChatRow({ c, active }: { c: ConversationRow; active: boolean }) {
         className={`flex w-full items-center gap-2 rounded-lg py-1.5 pr-8 pl-2.5 text-left text-[14px] ${active ? "bg-selected text-ink" : "text-ink-soft hover:bg-selected hover:text-ink"}`}
       >
         <span className="min-w-0 flex-1 truncate">{c.title}</span>
-        {c.score && <span className="shrink-0 text-[12px] tabular-nums text-ink-faint group-hover:invisible">{c.score}</span>}
       </button>
       <button
         onClick={() => setMenu((m) => !m)}
@@ -189,32 +189,20 @@ function ChatRow({ c, active }: { c: ConversationRow; active: boolean }) {
           </button>
         </div>
       )}
-      {confirming &&
-        // Rendered on <body>: the sidebar's slide transform would otherwise trap a fixed overlay.
-        createPortal(
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-scrim px-4" onClick={() => setConfirming(false)}>
-          <div role="alertdialog" aria-modal className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-[var(--shadow-float)]" onClick={(e) => e.stopPropagation()}>
-            <p className="font-serif text-[20px] text-ink">Delete this chat?</p>
-            <p className="mt-2 text-[14px] text-ink-soft">“{c.title}” will be removed. Tests made in it stay in Tests.</p>
-            <div className="mt-6 flex justify-end gap-2">
-              <button onClick={() => setConfirming(false)} className="rounded-lg px-3.5 py-2 text-[14px] text-ink hover:bg-selected">
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  setConfirming(false);
-                  await deleteConversation(c.id);
-                  if (active) go({ name: "home" });
-                }}
-                className="rounded-lg bg-danger px-3.5 py-2 text-[14px] font-medium text-surface hover:opacity-90"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>,
-          document.body,
-        )}
+      {confirming && (
+        <ConfirmDialog
+          title="Delete this chat?"
+          action="Delete"
+          onCancel={() => setConfirming(false)}
+          onConfirm={async () => {
+            setConfirming(false);
+            await deleteConversation(c.id);
+            if (active) go({ name: "home" });
+          }}
+        >
+          “{c.title}” will be removed. Tests made in it stay in Tests.
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

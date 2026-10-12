@@ -212,6 +212,17 @@ export function blockQuestions(block: QuestionBlock): number[] {
   return block.items.map((i) => i.q);
 }
 
+/** Remove paragraph letters the writer typed into the text ("A. By early…"); the app shows its own. */
+export function stripParagraphLabels(p: Passage): Passage {
+  return {
+    ...p,
+    paragraphs: p.paragraphs.map((text, i) => {
+      const label = PARAGRAPH_LABELS[i];
+      return label ? text.replace(new RegExp(`^\\s*\\(?${label}[.):]\\s+`), "") : text;
+    }),
+  };
+}
+
 export function passageUsesParagraphLetters(p: Passage) {
   return p.blocks.some((b) => b.family === "matching_information" || b.family === "matching_headings");
 }

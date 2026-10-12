@@ -1,11 +1,11 @@
 // Tools the tutor uses after tests exist: find them, read results, and show cards.
-import { questionPrompts, readingTestSchema } from "@ielts/spec";
+import { questionPrompts, readingTestSchema, speakingTestSchema, speakingTestText } from "@ielts/spec";
 import { z } from "zod";
 import { attempts, library, tests } from "../db.ts";
 import { defineTool } from "./registry.ts";
 
-function status(row: { raw: number | null; in_progress: number }) {
-  return row.raw !== null ? "scored" : row.in_progress ? "in progress" : "not started";
+function status(row: { submitted_at: number | null; marking: number; in_progress: number }) {
+  return row.submitted_at !== null ? (row.marking ? "being marked" : "scored") : row.in_progress ? "in progress" : "not started";
 }
 
 export const listTests = defineTool({
@@ -26,13 +26,30 @@ export const listTests = defineTool({
 export const getTestResult = defineTool({
   name: "get_test_result",
   description:
-    "Get a submitted test's marked answers: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote and the explanation. Use before explaining answers or discussing a score.",
+    "Get a submitted test's results. Reading: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote and the explanation. " +
+    "Speaking: the questions, the transcript of the interview, and the band and feedback for each criterion. Use before explaining answers or discussing a score.",
   input: z.object({ testId: z.string() }),
   async run({ testId }) {
     const row = tests.get(testId);
     if (!row) return { success: false, text: "No test with that id. Call list_tests." };
     const attempt = attempts.latest(testId);
     if (!attempt) return { success: false, text: "The learner has not submitted this test yet." };
+    if (row.kind === "speaking") {
+      const result = JSON.parse(attempt.result);
+      if (result.marking) return { text: "This Speaking test is still being marked; it takes about a minute." };
+      return {
+        text: JSON.stringify({
+          title: row.title,
+          questions: speakingTestText(speakingTestSchema.parse(JSON.parse(row.spec))),
+          band: result.band,
+          unmarked: result.unmarked,
+          note: "The bands were given by the voice examiner, which heard the learner (pronunciation included); examinerSaid is its assessment word for word. The overall band is the average of the four, rounded to the nearest half.",
+          examinerSaid: result.examinerSaid ?? null,
+          assessment: result.assessment,
+          transcript: result.transcript,
+        }),
+      };
+    }
     const spec = readingTestSchema.parse(JSON.parse(row.spec));
     const prompts = questionPrompts(spec);
     const result = JSON.parse(attempt.result);
@@ -60,7 +77,7 @@ export const getTestResult = defineTool({
 
 export const showTest = defineTool({
   name: "show_test",
-  description: "Show a test card (start, continue or review) in the chat.",
+  description: "Show a test card (start or review) in the chat.",
   input: z.object({ testId: z.string() }),
   async run({ testId }, ctx) {
     if (!tests.get(testId)) return { success: false, text: "No test with that id." };
@@ -71,7 +88,7 @@ export const showTest = defineTool({
 
 export const showScore = defineTool({
   name: "show_score",
-  description: "Show the score card for a submitted test: band, raw score, per part and per question type.",
+  description: "Show the score card for a submitted test: band, raw score, per part and per question type (Reading), or the band per criterion (Speaking).",
   input: z.object({ testId: z.string() }),
   async run({ testId }, ctx) {
     if (!attempts.latest(testId)) return { success: false, text: "That test has not been submitted yet." };
@@ -83,7 +100,7 @@ export const showScore = defineTool({
 export const explainQuestions = defineTool({
   name: "explain_questions",
   description:
-    "Show explanation cards for specific questions of a submitted test: the learner's answer, the key, the passage evidence highlighted, and your explanation. " +
+    "Reading only. Show explanation cards for specific questions of a submitted test: the learner's answer, the key, the passage evidence highlighted, and your explanation. " +
     "Call get_test_result first, then write a short, specific explanation for each question (why the key is right, and what made the learner's answer tempting). " +
     "The card already shows the learner's answer, the key and the evidence quote, so do not restate them; start with the reasoning.",
   input: z.object({
@@ -92,6 +109,7 @@ export const explainQuestions = defineTool({
   }),
   async run({ testId, items }, ctx) {
     if (!attempts.latest(testId)) return { success: false, text: "That test has not been submitted yet." };
+    if (tests.get(testId)?.kind !== "reading") return { success: false, text: "Explanation cards are for Reading. For Speaking, discuss the feedback in your reply, quoting the transcript." };
     ctx.emit({ type: "card", card: { kind: "explain", testId, items } });
     return { text: `Explanations shown for ${items.map((i) => `Q${i.q}`).join(", ")}.` };
   },
@@ -100,7 +118,7 @@ export const explainQuestions = defineTool({
 export const startTest = defineTool({
   name: "start_test",
   description:
-    "Open a test for the learner to take right now (or continue, or see results if already scored). Use when they ask to start, begin, take, continue or do a test. " +
+    "Open a test for the learner to take right now (or see results if already scored). Use when they ask to start, begin, take or do a test. " +
     "The app switches the learner's screen to the test, so reply with at most one short sentence.",
   input: z.object({ testId: z.string() }),
   async run({ testId }, ctx) {

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { decodeMessage } from "./skills.ts";
 import { invalidate } from "./data.ts";
+import { getAgentSettings } from "./agent.ts";
+
+/** Model, thinking effort and speed chosen in the composer, sent with every turn. */
+function turnSettings() {
+  const { model, effort, fast } = getAgentSettings();
+  return { model: model ?? undefined, effort: effort ?? undefined, fast };
+}
 import { splitSummary, stepFromItem, type Step } from "./work.ts";
 
 export type Conversation = { id: string; title: string; skill: string | null; updated_at: number };
@@ -32,12 +39,32 @@ export type Card =
   | { kind: "explain"; testId: string; items: { q: number; explanation: string }[] };
 
 export type Entry =
-  | { kind: "user"; id: string; text: string; skill: string | null; mode: string | null }
-  | { kind: "agent"; id: string; text: string }
+  | { kind: "user"; id: string; text: string; skill: string | null; mode: string | null; spoken?: boolean }
+  | { kind: "agent"; id: string; text: string; spoken?: boolean }
   | { kind: "ask"; id: string; askId: string | null; questions: Question[]; answers: Record<string, string[]> | null }
+  | { kind: "confirm"; id: string; requestId: string; tests: DeleteCandidate[]; outcome: "deleted" | "kept" | null }
   | { kind: "card"; id: string; card: Card }
   | { kind: "work"; id: string; steps: Step[]; startedAt: number | null; endedAt: number | null }
   | { kind: "error"; id: string; message: string };
+
+/** A test the tutor wants to delete, as listed in the confirmation panel. */
+export type DeleteCandidate = { testId: string; title: string; skill: string; taken: boolean };
+
+function deleteRequest(resultText: string): { requestId: string; tests: DeleteCandidate[] } | null {
+  try {
+    const r = JSON.parse(resultText);
+    return typeof r?.requestId === "string" && Array.isArray(r.tests) ? r : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Deleting changes the library, scores and chat list. */
+function refreshAfterDelete() {
+  invalidate("/api/tests");
+  invalidate("/api/progress");
+  invalidate("/api/conversations");
+}
 
 export async function createConversation(): Promise<string> {
   const { id } = await (await fetch("/api/conversations", { method: "POST" })).json();
@@ -50,11 +77,15 @@ const ms = (t: number | null | undefined) => (t == null ? null : t < 1e12 ? t * 
 /** Turn Codex thread history (plus app events such as score cards) into chat entries. */
 function entriesFromHistory(turns: any[], events: { kind: string; payload: any; createdAt: number }[]): Entry[] {
   const out: Entry[] = [];
-  const pending = [...events];
+  const late = new Map(events.filter((e) => e.kind === "ask_answer").map((e) => [e.payload.itemId as string, e.payload]));
+  const deleteAnswers = new Map(events.filter((e) => e.kind === "delete_answer").map((e) => [e.payload.requestId as string, e.payload.outcome]));
+  const lateTexts = new Set([...late.values()].map((p) => p.text as string));
+  const pending = events.filter((e) => e.kind !== "ask_answer");
   const flushBefore = (time: number | null) => {
     while (pending.length && (time === null || pending[0]!.createdAt <= time)) {
       const e = pending.shift()!;
       if (e.kind === "score") out.push({ kind: "card", id: `event-${e.createdAt}`, card: { kind: "score", testId: e.payload.testId } });
+      if (e.kind === "voice") out.push(spokenEntry(e.payload.role, e.payload.text, `voice-${e.createdAt}`));
     }
   };
   for (const turn of turns) {
@@ -66,6 +97,8 @@ function entriesFromHistory(turns: any[], events: { kind: string; payload: any; 
       if (item.type === "userMessage") {
         const raw = item.content?.filter((c: any) => c.type === "text").map((c: any) => c.text).join("\n") ?? "";
         const { text, skill, mode } = decodeMessage(raw);
+        // Late form answers are shown in their form, not as a message.
+        if (lateTexts.delete(raw)) continue;
         out.push({ kind: "user", id: item.id, text, skill, mode });
         if (!placed && steps.length) {
           out.push(work);
@@ -75,6 +108,8 @@ function entriesFromHistory(turns: any[], events: { kind: string; payload: any; 
         out.push({ kind: "agent", id: item.id, text: item.text });
       } else if (item.type === "dynamicToolCall") {
         const entry = entryFromToolCall(item);
+        if (entry?.kind === "ask" && entry.answers === null && late.has(item.id)) entry.answers = late.get(item.id).answers;
+        if (entry?.kind === "confirm") entry.outcome = deleteAnswers.get(entry.requestId) ?? null;
         if (entry) out.push(entry);
       }
     }
@@ -97,9 +132,14 @@ function entryFromToolCall(item: any): Entry | null {
       return item.success ? { kind: "card", id: item.id, card: { kind: "score", testId: args.testId } } : null;
     case "explain_questions":
       return item.success ? { kind: "card", id: item.id, card: { kind: "explain", testId: args.testId, items: args.items } } : null;
+    case "speaking_publish":
     case "reading_finalize": {
       const m = resultText.match(/test ([0-9a-f-]{36})/);
       return item.success && m ? { kind: "card", id: item.id, card: { kind: "test", testId: m[1]! } } : null;
+    }
+    case "delete_tests": {
+      const request = item.success ? deleteRequest(resultText) : null;
+      return request ? { kind: "confirm", id: item.id, requestId: request.requestId, tests: request.tests, outcome: null } : null;
     }
     case "ask_learner": {
       let answers: Record<string, string[]> | null = null;
@@ -112,7 +152,12 @@ function entryFromToolCall(item: any): Entry | null {
   return null;
 }
 
+function spokenEntry(role: string, text: string, id: string): Entry {
+  return role === "user" ? { kind: "user", id, text, skill: null, mode: null, spoken: true } : { kind: "agent", id, text, spoken: true };
+}
+
 export type Activity = { label: string } | null;
+export type Caption = { role: string; text: string } | null;
 
 /** Add or update a step in the work log of the given turn (creating the log if needed). */
 function upsertStep(xs: Entry[], turnId: string | undefined, step: Step, keepLabel = false): Entry[] {
@@ -133,6 +178,9 @@ export function useConversation(conversationId: string | null, initial?: { curre
   const [entries, setEntries] = useState<Entry[]>([]);
   const [busy, setBusy] = useState(false);
   const [activity, setActivity] = useState<Activity>(null);
+  // What is being said right now in a voice conversation, before it becomes a message.
+  const [caption, setCaption] = useState<Caption>(null);
+  const [voiceEnded, setVoiceEnded] = useState(0);
   const ws = useRef<WebSocket | null>(null);
   const queued = useRef<string[]>([]);
   const sentFirst = useRef<string | null>(null);
@@ -142,6 +190,7 @@ export function useConversation(conversationId: string | null, initial?: { curre
     setEntries([]);
     setBusy(false);
     setActivity(null);
+    setCaption(null);
     if (!conversationId) return;
     let cancelled = false;
 
@@ -155,7 +204,7 @@ export function useConversation(conversationId: string | null, initial?: { curre
       setActivity({ label: "Thinking" });
       if (sentFirst.current !== conversationId) {
         sentFirst.current = conversationId;
-        queued.current.push(JSON.stringify({ type: "send", text: first }));
+        queued.current.push(JSON.stringify({ type: "send", text: first, ...turnSettings() }));
       }
     }
 
@@ -163,8 +212,20 @@ export function useConversation(conversationId: string | null, initial?: { curre
       .then((r) => r.json())
       .then(({ turns, events }) => {
         if (cancelled) return;
-        // Live events may already have arrived for a brand-new conversation; keep them.
-        setEntries((live) => (live.length ? live : entriesFromHistory(turns ?? [], events ?? [])));
+        // Live events may already have arrived for a brand-new conversation; keep them. A form still
+        // waiting for the learner is replayed on connect: attach it to the history.
+        setEntries((live) => {
+          const history = entriesFromHistory(turns ?? [], events ?? []);
+          if (!live.length) return history;
+          if (!live.every((x) => x.kind === "ask" && x.askId)) return live;
+          const merged = history.slice();
+          for (const x of live) {
+            const stale = merged.findLastIndex((h) => h.kind === "ask" && h.askId === null && h.answers === null);
+            if (stale === -1) merged.push(x);
+            else merged[stale] = { ...x, id: merged[stale]!.id } as Entry;
+          }
+          return merged;
+        });
         if ((turns ?? []).some((t: any) => t.status === "inProgress")) {
           setBusy(true);
           setActivity((a) => a ?? { label: "Working" });
@@ -189,6 +250,8 @@ export function useConversation(conversationId: string | null, initial?: { curre
         case "turn":
           setBusy(e.status === "inProgress");
           if (e.status === "inProgress") setActivity(null);
+          // The first message names the chat; show it in the sidebar straight away.
+          if (e.status === "inProgress") invalidate("/api/conversations");
           if (e.status === "inProgress")
             setEntries((xs) => (xs.some((x) => x.kind === "work" && x.id === e.turnId) ? xs : [...xs, { kind: "work", id: e.turnId, steps: [], startedAt: e.startedAt ?? Date.now(), endedAt: null }]));
           else
@@ -245,9 +308,18 @@ export function useConversation(conversationId: string | null, initial?: { curre
             if (done && done.kind === "ask")
               setEntries((xs) => xs.map((x) => (x.kind === "ask" && x.answers === null ? { ...x, answers: done.answers } : x)));
           }
-          if (e.phase === "completed" && it.type === "dynamicToolCall" && it.tool === "reading_finalize" && it.success) invalidate("/api/tests");
+          // A test was published or changed in place: refresh every view of it.
+          if (e.phase === "completed" && it.type === "dynamicToolCall" && (it.tool === "reading_finalize" || it.tool === "speaking_publish") && it.success)
+            invalidate("/api/tests");
           return;
         }
+        case "confirm_delete":
+          return setEntries((xs) =>
+            xs.some((x) => x.kind === "confirm" && x.requestId === e.requestId) ? xs : [...xs, { kind: "confirm", id: e.requestId, requestId: e.requestId, tests: e.tests, outcome: null }],
+          );
+        case "delete_answer":
+          if (e.outcome === "deleted") refreshAfterDelete();
+          return setEntries((xs) => xs.map((x) => (x.kind === "confirm" && x.requestId === e.requestId ? { ...x, outcome: e.outcome } : x)));
         case "ask":
           setActivity(null);
           return setEntries((xs) => {
@@ -259,7 +331,25 @@ export function useConversation(conversationId: string | null, initial?: { curre
             copy[stale] = entry;
             return copy;
           });
+        case "voice":
+          if (e.event === "delta") return setCaption((c) => (c && c.role === e.role ? { role: e.role, text: c.text + e.delta } : { role: e.role, text: e.delta }));
+          if (e.event === "done") {
+            setCaption(null);
+            if (e.text?.trim()) setEntries((xs) => [...xs, spokenEntry(e.role, e.text, crypto.randomUUID())]);
+            return;
+          }
+          if (e.event === "closed") {
+            setCaption(null);
+            setVoiceEnded((n) => n + 1);
+          }
+          if (e.event === "error") setEntries((xs) => [...xs, { kind: "error", id: crypto.randomUUID(), message: e.message }]);
+          return;
         case "card":
+          // A score card means the test's result changed (Speaking marks arrive later).
+          if (e.card.kind === "score") {
+            invalidate(`/api/tests/${e.card.testId}`);
+            invalidate("/api/tests");
+          }
           return setEntries((xs) => [...xs, { kind: "card", id: crypto.randomUUID(), card: e.card }]);
         case "open":
           // The tutor started a test: switch to it (live events only, never on history replay).
@@ -280,12 +370,12 @@ export function useConversation(conversationId: string | null, initial?: { curre
   }, []);
 
   const send = useCallback(
-    (raw: string, effort?: string) => {
+    (raw: string) => {
       const { text, skill, mode } = decodeMessage(raw);
       setEntries((xs) => [...xs, { kind: "user", id: crypto.randomUUID(), text, skill, mode }]);
       setBusy(true);
       setActivity({ label: "Thinking" });
-      post({ type: "send", text: raw, effort });
+      post({ type: "send", text: raw, ...turnSettings() });
     },
     [post],
   );
@@ -299,13 +389,29 @@ export function useConversation(conversationId: string | null, initial?: { curre
     [post],
   );
 
+  /** The panel decides by itself; the tutor is told afterwards. */
+  const confirmDelete = useCallback(
+    (requestId: string, confirmed: boolean) => {
+      setEntries((xs) => xs.map((x) => (x.kind === "confirm" && x.requestId === requestId ? { ...x, outcome: confirmed ? "deleted" : "kept" } : x)));
+      post({ type: "confirmDelete", requestId, confirmed });
+    },
+    [post],
+  );
+
   const interrupt = useCallback(() => post({ type: "interrupt" }), [post]);
 
-  const markAnswered = useCallback((id: string, answers: Record<string, string[]>) => {
-    setEntries((xs) => xs.map((x) => (x.kind === "ask" && x.id === id ? { ...x, answers } : x)));
-  }, []);
+  /** Answer a form whose tool call has ended (e.g. the app restarted): the tutor gets it as the next message. */
+  const answerLate = useCallback(
+    (itemId: string, answers: Record<string, string[]>, text: string) => {
+      setEntries((xs) => xs.map((x) => (x.kind === "ask" && x.id === itemId ? { ...x, answers } : x)));
+      setBusy(true);
+      setActivity({ label: "Thinking" });
+      post({ type: "lateAnswer", itemId, answers, text, ...turnSettings() });
+    },
+    [post],
+  );
 
-  return { entries, busy, activity, send, answer, interrupt, markAnswered };
+  return { entries, busy, activity, caption, voiceEnded, send, answer, confirmDelete, interrupt, answerLate };
 }
 
 /** Start a new chat and send a first message (e.g. "Make me a drill on ..."). */

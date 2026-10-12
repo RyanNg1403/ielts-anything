@@ -78,6 +78,17 @@ export function App() {
     }
   };
 
+  const startVoice = async () => {
+    setCreating(true);
+    try {
+      const id = await createConversation();
+      sessionStorage.setItem(`voice:${id}`, "1");
+      go({ name: "chat", id });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (route.name === "test") return <TestScreen key={`${route.id}-${route.review}`} {...route} />;
 
   return (
@@ -106,6 +117,7 @@ export function App() {
               <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
+          <img src="/branding/emblem-ielts-four-skills.svg" alt="" aria-hidden="true" className="size-6 shrink-0" />
           <span className="font-serif text-[17px] font-semibold">IELTS Anything</span>
         </header>
         {!sidebarOpen && (
@@ -121,7 +133,7 @@ export function App() {
             <div className="flex h-full items-center justify-center overflow-y-auto px-4 sm:px-8">
               <div className="w-full max-w-[680px] pb-[12vh]">
                 <h1 className="mb-8 text-center font-serif text-[34px] font-normal leading-tight tracking-tight text-ink sm:text-[42px]">What do you want to practise?</h1>
-                <PracticeComposer onSubmit={start} disabled={creating} />
+                <PracticeComposer onSubmit={start} onVoice={startVoice} disabled={creating} />
               </div>
             </div>
           )}

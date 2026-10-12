@@ -23,13 +23,13 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         key: `t-${x.id}`,
         group: "Tests",
         title: x.title,
-        meta: x.status === "scored" ? (x.band != null ? `Band ${x.band.toFixed(1)}` : `${x.raw}/${x.total}`) : x.status === "in_progress" ? "In progress" : "Not started",
+        meta: x.status === "scored" ? (x.band != null ? `Band ${x.band.toFixed(1)}` : x.total ? `${x.raw}/${x.total}` : "Not marked") : x.status === "in_progress" ? "In progress" : x.status === "marking" ? "Marking…" : "Not taken",
         route: { name: "test", id: x.id, review: false, q: null, part: null },
         skill: x.kind,
       }));
     const c: Result[] = chats
       .filter((x) => match(x.title))
-      .map((x) => ({ key: `c-${x.id}`, group: "Chats", title: x.title, meta: x.score ?? "", route: { name: "chat", id: x.id }, skill: x.skill }));
+      .map((x) => ({ key: `c-${x.id}`, group: "Chats", title: x.title, meta: "", route: { name: "chat", id: x.id }, skill: x.skill }));
     return [...c, ...t].slice(0, 30);
   }, [q, chats, tests]);
 

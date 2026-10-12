@@ -79,18 +79,7 @@ export const conversations = {
     return db.prepare("select * from conversations where id = ?").get(id) as ConversationRow | undefined;
   },
   list() {
-    // Each chat with its newest scored band (or raw score for drills) for the sidebar.
-    return db
-      .prepare(
-        `select c.*, (
-           select case when json_extract(a.result, '$.band') is not null then printf('%.1f', json_extract(a.result, '$.band'))
-                       else json_extract(a.result, '$.raw') || '/' || json_extract(a.result, '$.total') end
-           from attempts a join tests t on t.id = a.test_id
-           where t.conversation_id = c.id order by a.submitted_at desc limit 1
-         ) as score
-         from conversations c order by c.updated_at desc limit 200`,
-      )
-      .all() as (ConversationRow & { score: string | null })[];
+    return db.prepare("select * from conversations order by updated_at desc limit 200").all() as ConversationRow[];
   },
   update(id: string, fields: Partial<Pick<ConversationRow, "title" | "skill">>) {
     const row = this.get(id);
@@ -160,6 +149,19 @@ export const tests = {
   get(id: string) {
     return db.prepare("select * from tests where id = ?").get(id) as TestRow | undefined;
   },
+  /** Replace an untaken test's content in place, keeping its id (and so every card that shows it). */
+  update(id: string, row: Pick<TestRow, "mode" | "title" | "spec" | "review">) {
+    db.prepare("update tests set mode = ?, title = ?, spec = ?, review = ? where id = ?").run(row.mode, row.title, row.spec, row.review, id);
+    db.prepare("delete from progress where test_id = ?").run(id);
+  },
+  /** Remove a test with its attempts and saved progress. Returns the removed attempt ids. */
+  delete(id: string) {
+    const ids = (db.prepare("select id from attempts where test_id = ?").all(id) as { id: string }[]).map((a) => a.id);
+    db.prepare("delete from attempts where test_id = ?").run(id);
+    db.prepare("delete from progress where test_id = ?").run(id);
+    db.prepare("delete from tests where id = ?").run(id);
+    return ids;
+  },
   forConversation(conversationId: string) {
     return db.prepare("select id, kind, mode, title, created_at from tests where conversation_id = ? order by created_at").all(conversationId) as Pick<
       TestRow,
@@ -181,8 +183,15 @@ export const attempts = {
       Date.now(),
     );
   },
+  get(id: string) {
+    return db.prepare("select * from attempts where id = ?").get(id) as AttemptRow | undefined;
+  },
   latest(testId: string) {
     return db.prepare("select * from attempts where test_id = ? order by submitted_at desc limit 1").get(testId) as AttemptRow | undefined;
+  },
+  /** Replace an attempt's result (Speaking marks arrive after the submission). */
+  setResult(id: string, result: unknown) {
+    db.prepare("update attempts set result = ? where id = ?").run(JSON.stringify(result), id);
   },
   bestByConversation() {
     return db
@@ -204,6 +213,8 @@ export type LibraryRow = {
   total: number | null;
   band: number | null;
   submitted_at: number | null;
+  /** 1 while a Speaking attempt is still being marked. */
+  marking: number;
   in_progress: number;
   answered: string | null;
   spec: string;
@@ -216,6 +227,7 @@ export const library = {
         `select t.id, t.conversation_id, t.kind, t.mode, t.title, t.created_at, t.spec,
                 json_extract(a.result, '$.raw') as raw, json_extract(a.result, '$.total') as total,
                 json_extract(a.result, '$.band') as band, a.submitted_at,
+                coalesce(json_extract(a.result, '$.marking'), 0) as marking,
                 (p.test_id is not null) as in_progress, p.responses as answered
          from tests t
          left join attempts a on a.id = (select id from attempts where test_id = t.id order by submitted_at desc limit 1)

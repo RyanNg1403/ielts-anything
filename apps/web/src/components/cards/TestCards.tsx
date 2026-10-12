@@ -3,6 +3,7 @@ import { blockQuestions, questionPrompts, type ReadingTest } from "@ielts/spec";
 import { useLibrary, useTest } from "../../data.ts";
 import { go } from "../../router.ts";
 import { ScoreSummary } from "../ScoreSummary.tsx";
+import { SpeakingScoreCard, SpeakingTestCard } from "./SpeakingCards.tsx";
 
 /** Lets cards send chat messages on the learner's behalf. */
 export const ChatActions = createContext<{ send: (text: string) => void; busy: boolean }>({ send: () => {}, busy: false });
@@ -14,13 +15,20 @@ function Skeleton() {
   return <div className={`${shell} h-28 animate-pulse`} />;
 }
 
+/** Stands in for a card whose test was deleted (or failed to load). */
+function Gone({ error }: { error: string }) {
+  return <p className="rounded-2xl border border-dashed border-rule px-5 py-4 text-[14px] text-ink-faint">{/not found/i.test(error) ? "This test was deleted." : error}</p>;
+}
+
 const countQs = (t: ReadingTest) => t.passages.reduce((n, p) => n + p.blocks.flatMap(blockQuestions).length, 0);
 
 /** A published test. Click anywhere to take it (or see its results once scored). */
 export function TestCard({ testId }: { testId: string }) {
-  const { data } = useTest(testId);
+  const { data, error } = useTest(testId);
   const { data: lib } = useLibrary();
+  if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
+  if (data.kind === "speaking") return <SpeakingTestCard data={data} className={clickable} />;
   const t = data.test;
   const row = lib?.find((r) => r.id === testId);
   const questions = countQs(t);
@@ -64,8 +72,10 @@ export function TestCard({ testId }: { testId: string }) {
 
 /** Score summary after submission. Click to open the full results. */
 export function ScoreCard({ testId }: { testId: string }) {
-  const { data } = useTest(testId);
+  const { data, error } = useTest(testId);
+  if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
+  if (data.kind === "speaking") return <SpeakingScoreCard data={data} className={clickable} />;
   if (!data.attempt) return null;
   return (
     <button onClick={() => go({ name: "test", id: testId, review: false, q: null, part: null })} className={`${clickable} px-5 py-5`}>
@@ -77,9 +87,10 @@ export function ScoreCard({ testId }: { testId: string }) {
 
 /** The tutor's explanations for specific questions, with the passage evidence. */
 export function ExplainCard({ testId, items }: { testId: string; items: { q: number; explanation: string }[] }) {
-  const { data } = useTest(testId);
+  const { data, error } = useTest(testId);
+  if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
-  if (!data.attempt) return null;
+  if (data.kind !== "reading" || !data.attempt) return null;
   const prompts = questionPrompts(data.test);
   const marked = new Map(data.attempt.result.items.map((i) => [i.q, i]));
   return (

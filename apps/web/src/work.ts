@@ -8,6 +8,7 @@ const SKILL_NAMES: Record<string, string> = {
   "reading-passage-writer": "the passage-writing guide",
   "reading-item-writer": "the question-writing guide",
   "reading-key-auditor": "the answer-key checklist",
+  "speaking-test-writer": "the Speaking test guide",
 };
 
 /** "**Planning passages**\n\nI'm going to..." -> label "Planning passages", detail "I'm going to..." */
@@ -85,7 +86,15 @@ function toolStep(item: any, status: Step["status"]): Step | null {
         const m = out.match(/disagreed with (\d+)/);
         return { id, kind: "check", label: m ? `The solver disputed ${plural(Number(m[1]), "answer")}` : "Final checks found problems", detail: out.split("\n").slice(1, 5).join("\n"), status: "failed" };
       }
-      return { id, kind: "done", label: "Every answer checked; test published", status };
+      return { id, kind: "done", label: /^Updated/.test(out) ? "Every answer checked; test updated" : "Every answer checked; test published", status };
+    case "speaking_publish":
+      if (running) return { id, kind: "check", label: "Checking the Speaking test", status };
+      if (status === "failed") return { id, kind: "check", label: "The Speaking test needed fixes", detail: out.split("\n").slice(1, 4).join("\n"), status: "failed" };
+      return { id, kind: "done", label: /^Updated/.test(out) ? "Speaking test updated" : "Speaking test ready", status };
+    case "edit_test":
+      return { id, kind: "read", label: status === "failed" ? "This test can no longer be changed" : "Opened the test to change it", status };
+    case "delete_tests":
+      return { id, kind: "ask", label: status === "failed" ? "Could not find those tests" : `Asked you to confirm deleting ${plural(a.testIds?.length ?? 1, "test")}`, status };
     case "get_test_result":
       return { id, kind: "read", label: "Looked at your answers", status };
     case "list_tests":
