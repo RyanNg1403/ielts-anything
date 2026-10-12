@@ -9,6 +9,7 @@ import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { TestsPage } from "./pages/TestsPage.tsx";
 import { go, useRoute } from "./router.ts";
 import { TestScreen } from "./test/TestScreen.tsx";
+import { FiguresPreview } from "./pages/FiguresPreview.tsx";
 import { useTheme } from "./theme.ts";
 
 export function App() {
@@ -89,6 +90,7 @@ export function App() {
     }
   };
 
+  if (route.name === "figures") return <FiguresPreview />;
   if (route.name === "test") return <TestScreen key={`${route.id}-${route.review}`} {...route} />;
 
   return (

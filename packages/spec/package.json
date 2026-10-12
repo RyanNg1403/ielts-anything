@@ -2,6 +2,6 @@
   "name": "@ielts/spec",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": { ".": "./src/index.ts", "./samples": "./src/writing-samples.ts" },
   "dependencies": { "zod": "4.6.5" }
 }
