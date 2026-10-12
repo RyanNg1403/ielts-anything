@@ -81,7 +81,7 @@ function SkillTile({ skill, label, history }: { skill: string; label: string; hi
               <span className="block font-serif text-[40px] font-semibold leading-none text-ink">
                 {latest ? latest.band!.toFixed(1) : lastDrill ? `${lastDrill.raw}/${lastDrill.total}` : "—"}
               </span>
-              <span className="mt-1 block text-[13px] text-ink-soft">{latest ? (skill === "speaking" ? "Band, latest test" : "Band, latest full test") : "Latest drill"}</span>
+              <span className="mt-1 block text-[13px] text-ink-soft">{latest ? (skill === "reading" ? "Band, latest full test" : "Band, latest test") : "Latest drill"}</span>
             </p>
             <Trend points={full} />
           </div>

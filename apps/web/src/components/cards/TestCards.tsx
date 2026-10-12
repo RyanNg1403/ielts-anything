@@ -4,6 +4,7 @@ import { useLibrary, useTest } from "../../data.ts";
 import { go } from "../../router.ts";
 import { ScoreSummary } from "../ScoreSummary.tsx";
 import { SpeakingScoreCard, SpeakingTestCard } from "./SpeakingCards.tsx";
+import { WritingScoreCard, WritingTestCard } from "./WritingCards.tsx";
 
 /** Lets cards send chat messages on the learner's behalf. */
 export const ChatActions = createContext<{ send: (text: string) => void; busy: boolean }>({ send: () => {}, busy: false });
@@ -29,6 +30,7 @@ export function TestCard({ testId }: { testId: string }) {
   if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
   if (data.kind === "speaking") return <SpeakingTestCard data={data} className={clickable} />;
+  if (data.kind === "writing") return <WritingTestCard data={data} className={clickable} />;
   const t = data.test;
   const row = lib?.find((r) => r.id === testId);
   const questions = countQs(t);
@@ -76,6 +78,7 @@ export function ScoreCard({ testId }: { testId: string }) {
   if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
   if (data.kind === "speaking") return <SpeakingScoreCard data={data} className={clickable} />;
+  if (data.kind === "writing") return <WritingScoreCard data={data} className={clickable} />;
   if (!data.attempt) return null;
   return (
     <button onClick={() => go({ name: "test", id: testId, review: false, q: null, part: null })} className={`${clickable} px-5 py-5`}>

@@ -49,6 +49,9 @@ export const tableFigureSchema = z.object({
   rows: z.array(z.object({ label: z.string(), cells: z.array(z.string()) })).min(2).max(8).describe("Each row has one cell per data column, written as printed, e.g. '12.5' or '+3%'."),
 });
 
+/** Maps and process diagrams are drawn with image generation; the app attaches the image here. */
+const image = z.string().optional().describe("Set by the app to the image you generated. Leave it out.");
+
 const stage = z.object({
   id: z.string().describe("Short id used by the arrows, e.g. 's1'."),
   label: z.string().describe("What happens at this stage, as printed beside it, e.g. 'Crushing' or 'Heating pellets to form raw material'."),
@@ -63,6 +66,7 @@ export const processFigureSchema = z.object({
     .array(z.object({ from: z.string(), to: z.string(), label: z.string().describe("Text on the arrow, e.g. 'Washing', or ''.") }))
     .min(4)
     .describe("Every link between stages. A cycle ends with an arrow from the last stage back to the first."),
+  image,
 });
 
 const featureKind = z.enum(["building", "area", "trees", "water", "road", "path"]);
@@ -95,6 +99,7 @@ export const mapFigureSchema = z.object({
     .min(2)
     .max(3)
     .describe("The same site at two (rarely three) times, or now and as planned. Unchanged features keep the same box."),
+  image,
 });
 
 export const figureSchema = z.discriminatedUnion("kind", [lineFigureSchema, barFigureSchema, pieFigureSchema, tableFigureSchema, processFigureSchema, mapFigureSchema]);
@@ -177,6 +182,23 @@ export function writingMinutes(t: Pick<WritingTest, "task1" | "task2">) {
 /** How Task 1 is classed, e.g. 'map' or 'mixed:bar+table'. */
 export function task1Family(t: Task1) {
   return t.figures.length === 1 ? t.figures[0]!.kind : `mixed:${t.figures.map((f) => f.kind).join("+")}`;
+}
+
+const FIGURE_NAMES: Record<Figure["kind"], string> = { line: "line graph", bar: "bar chart", pie: "pie charts", table: "table", process: "process diagram", map: "maps" };
+export const TASK2_NAMES: Record<Task2["family"], string> = {
+  opinion: "Opinion",
+  discussion: "Discussion",
+  "problem-solution": "Problem and solution",
+  "advantages-disadvantages": "Advantages and disadvantages",
+  outweigh: "Advantages and disadvantages compared",
+  "positive-negative": "Positive or negative development",
+  "two-part": "Two questions",
+  hybrid: "Question and opinion",
+};
+
+/** What a learner reads for a Task 1: "bar chart", "pie charts and table", "maps". */
+export function task1Label(t: Task1) {
+  return t.figures.map((f) => FIGURE_NAMES[f.kind]).join(" and ");
 }
 
 /** Words as IELTS counts them: anything between spaces, so numbers and hyphenated words count once. */
@@ -266,6 +288,7 @@ function checkFigure(f: Figure, where: string, err: Report, warn: Report) {
       f.arrows.forEach((a) => {
         if (!ids.has(a.from) || !ids.has(a.to)) err(where, `the arrow ${a.from} -> ${a.to} names a stage that does not exist.`);
         if (a.from === a.to) err(where, `the arrow ${a.from} -> ${a.to} points at itself.`);
+        if (a.label.split(/\s+/).filter(Boolean).length > 4) err(where, `the arrow label "${a.label}" is too long to print between stages; use at most 4 words.`);
       });
       const linked = new Set(f.arrows.flatMap((a) => [a.from, a.to]));
       f.stages.forEach((s) => {
@@ -300,10 +323,78 @@ function checkFigure(f: Figure, where: string, err: Report, warn: Report) {
           }
       });
       const labels = new Set(f.states.flatMap((s) => s.features.map((x) => x.label.trim().toLowerCase()).filter(Boolean)));
-      if (labels.size < 8) warn(where, `only ${labels.size} labelled features; Cambridge plans label 9-17.`);
+      if (labels.size < 9) err(where, `only ${labels.size} different labelled features; Cambridge plans label 9-17. Add more buildings, areas and roads, changed and unchanged.`);
+      if (labels.size > 20) warn(where, `${labels.size} labelled features is crowded; Cambridge plans label 9-17.`);
+      // A change: a feature added, removed, or moved or resized between the first and last plan.
+      const key = (x: MapFeature) => x.label.trim().toLowerCase() || x.kind;
+      const [first, last] = [f.states[0]!, f.states[f.states.length - 1]!];
+      const before = new Map(first.features.map((x) => [key(x), JSON.stringify([x.kind, x.box, x.points])]));
+      const after = new Map(last.features.map((x) => [key(x), JSON.stringify([x.kind, x.box, x.points])]));
+      const changes = [...new Set([...before.keys(), ...after.keys()])].filter((k) => before.get(k) !== after.get(k)).length;
+      if (changes < 4) err(where, `only ${changes} changes between the plans; show 4-7 additions, removals, replacements or extensions.`);
       const sameAll = f.states.every((s) => JSON.stringify(s.features) === JSON.stringify(f.states[0]!.features));
       if (sameAll) err(where, "the plans are identical; show what changed.");
       break;
     }
   }
+}
+
+// ---- Marking ----
+
+export const WRITING_CRITERIA = ["task", "coherence", "lexical", "grammar"] as const;
+export type WritingCriterion = (typeof WRITING_CRITERIA)[number];
+export const WRITING_CRITERION_NAMES: Record<WritingTaskNumber, Record<WritingCriterion, string>> = {
+  1: { task: "Task Achievement", coherence: "Coherence and Cohesion", lexical: "Lexical Resource", grammar: "Grammatical Range and Accuracy" },
+  2: { task: "Task Response", coherence: "Coherence and Cohesion", lexical: "Lexical Resource", grammar: "Grammatical Range and Accuracy" },
+};
+
+// Evidence and the top-down check come before the band, so the band follows from them.
+const criterionMark = z.object({
+  evidence: z.string().describe("What in the response decided this band, quoting the candidate's own words."),
+  descriptor: z.string().describe("The descriptor phrase that fits, and the phrase from the band above that the response does not meet."),
+  check: z.string().describe("The top-down check in one line, e.g. 'band 8 no: ...; band 7 yes.'"),
+  band: z.number().int().min(0).max(9),
+});
+
+export const taskMarkSchema = z.object({
+  task: criterionMark,
+  coherence: criterionMark,
+  lexical: criterionMark,
+  grammar: criterionMark,
+  corrections: z
+    .array(z.object({ quote: z.string().describe("Exact words from the response."), fix: z.string().describe("The corrected version."), why: z.string().describe("A short reason.") }))
+    .max(12)
+    .describe("The most useful corrections, in the order they appear."),
+  nextSteps: z.string().describe("One to three concrete things to practise."),
+});
+export type TaskMark = z.infer<typeof taskMarkSchema>;
+
+export type WritingTaskResult = TaskMark & { words: number; band: number };
+export type WritingResult = {
+  kind: "writing";
+  /** Overall band, or null when nothing could be marked. */
+  band: number | null;
+  tasks: Partial<Record<`${WritingTaskNumber}`, WritingTaskResult>>;
+  /** Why the test was not marked, when it was not. */
+  unmarked: string | null;
+};
+
+/** IELTS rounds averages to the nearest half band: .25 goes up to .5, .75 up to the next band. */
+export function roundBand(x: number) {
+  return Math.floor(x * 2 + 0.5) / 2;
+}
+
+/** A task's band is the mean of its four criteria. */
+export function taskBand(m: TaskMark) {
+  return roundBand(WRITING_CRITERIA.reduce((s, c) => s + m[c].band, 0) / 4);
+}
+
+/** Overall Writing band: Task 2 counts twice as much as Task 1. */
+export function writingOverall(tasks: WritingResult["tasks"]) {
+  const t1 = tasks["1"];
+  const t2 = tasks["2"];
+  const mean = (m: TaskMark) => WRITING_CRITERIA.reduce((s, c) => s + m[c].band, 0) / 4;
+  if (t1 && t2) return roundBand((mean(t1) + 2 * mean(t2)) / 3);
+  const only = t1 ?? t2;
+  return only ? taskBand(only) : null;
 }

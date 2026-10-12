@@ -1,6 +1,6 @@
 // Shared server data with a tiny cache so cards, pages and the sidebar stay in sync.
 import { useEffect, useState } from "react";
-import type { ReadingTest, ReadingResult, SpeakingCandidate, SpeakingResult, SpeakingTest } from "@ielts/spec";
+import type { ReadingTest, ReadingResult, SpeakingCandidate, SpeakingResult, SpeakingTest, WritingResult, WritingTest } from "@ielts/spec";
 
 export type LibraryItem = {
   id: string;
@@ -38,9 +38,15 @@ export type SpeakingPayload = PayloadBase & {
   attempt: { id: string; result: SpeakingResult | { kind: "speaking"; marking: 1 }; elapsed_sec: number | null; submitted_at: number; recording?: boolean } | null;
 };
 
-export type TestPayload = ReadingPayload | SpeakingPayload;
+export type WritingPayload = PayloadBase & {
+  kind: "writing";
+  test: WritingTest;
+  attempt: { id: string; responses: { "1"?: string; "2"?: string }; result: WritingResult | { kind: "writing"; marking: 1 }; elapsed_sec: number | null; submitted_at: number } | null;
+};
 
-export const isMarking = (a: SpeakingPayload["attempt"]): boolean => !!a && "marking" in a.result;
+export type TestPayload = ReadingPayload | SpeakingPayload | WritingPayload;
+
+export const isMarking = (a: SpeakingPayload["attempt"] | WritingPayload["attempt"]): boolean => !!a && "marking" in a.result;
 
 export type ProgressPayload = {
   history: { testId: string; title: string; skill: string; mode: string; raw: number; total: number; band: number | null; submittedAt: number }[];
@@ -125,10 +131,26 @@ export async function retakeSpeaking(testId: string, attemptId: string) {
   invalidate("/api/progress");
 }
 
+/** Clear an unmarked Writing attempt so its test can be taken again. */
+export const retakeWriting = retakeSpeaking;
+
 export async function deleteConversation(id: string) {
   await fetch(`/api/conversations/${id}`, { method: "DELETE" });
   invalidate("/api/conversations");
   invalidate("/api/tests");
+}
+
+export async function submitWriting(testId: string, responses: { "1"?: string; "2"?: string }, elapsedSec: number) {
+  const r = await fetch(`/api/tests/${testId}/attempts`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ responses, elapsedSec }),
+  });
+  if (!r.ok) throw new Error("Submitting failed. Try again; your writing is still here.");
+  invalidate(`/api/tests/${testId}`);
+  invalidate("/api/tests");
+  invalidate("/api/progress");
+  invalidate("/api/conversations");
 }
 
 export async function submitAttempt(testId: string, responses: Record<string, string>, elapsedSec: number) {

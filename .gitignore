@@ -21,3 +21,4 @@ dist/
 *.log
 apps/web/public/__probe/
 research/ielts/writing-types/.pages/
+spikes/figures/*.png

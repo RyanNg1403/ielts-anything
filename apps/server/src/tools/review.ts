@@ -1,5 +1,5 @@
 // Tools the tutor uses after tests exist: find them, read results, and show cards.
-import { questionPrompts, readingTestSchema, speakingTestSchema, speakingTestText } from "@ielts/spec";
+import { questionPrompts, readingTestSchema, speakingTestSchema, speakingTestText, writingTestSchema } from "@ielts/spec";
 import { z } from "zod";
 import { attempts, library, tests } from "../db.ts";
 import { defineTool } from "./registry.ts";
@@ -27,7 +27,8 @@ export const getTestResult = defineTool({
   name: "get_test_result",
   description:
     "Get a submitted test's results. Reading: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote and the explanation. " +
-    "Speaking: the questions, the transcript of the interview, and the examiner's band and assessment for each criterion. The transcript is speech recognition: it shows the words, " +
+    "Writing: the tasks (Task 1 figure data included), the learner's writing, and the marker's bands, evidence and corrections for each criterion. " +
+      "Speaking: the questions, the transcript of the interview, and the examiner's band and assessment for each criterion. The transcript is speech recognition: it shows the words, " +
       "grammar and hesitations, but spells mispronounced words correctly, so never use it as evidence about pronunciation. Use before explaining answers or discussing a score.",
   input: z.object({ testId: z.string() }),
   async run({ testId }) {
@@ -35,6 +36,21 @@ export const getTestResult = defineTool({
     if (!row) return { success: false, text: "No test with that id. Call list_tests." };
     const attempt = attempts.latest(testId);
     if (!attempt) return { success: false, text: "The learner has not submitted this test yet." };
+    if (row.kind === "writing") {
+      const result = JSON.parse(attempt.result);
+      if (result.marking) return { text: "This Writing test is still being marked; it takes a few minutes." };
+      return {
+        text: JSON.stringify({
+          title: row.title,
+          test: writingTestSchema.parse(JSON.parse(row.spec)),
+          responses: JSON.parse(attempt.responses),
+          band: result.band,
+          unmarked: result.unmarked,
+          note: "Each criterion was marked against the official Writing descriptors. A task band is the mean of its four criteria; the overall band counts Task 2 twice, rounded to the nearest half.",
+          tasks: result.tasks,
+        }),
+      };
+    }
     if (row.kind === "speaking") {
       const result = JSON.parse(attempt.result);
       if (result.marking) return { text: "This Speaking test is still being marked; it takes about a minute." };

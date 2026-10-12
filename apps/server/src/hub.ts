@@ -8,6 +8,7 @@ import { DEVELOPER_INSTRUCTIONS, VOICE_PROMPT } from "./instructions.ts";
 import type { ToolRegistry } from "./tools/registry.ts";
 import { WORKSPACE } from "./codex/home.ts";
 import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./codex/defaults.ts";
+import { keepGenerated } from "./writing/images.ts";
 
 export type ClientEvent = Record<string, unknown> & { type: string };
 type Listener = (event: ClientEvent) => void;
@@ -262,6 +263,12 @@ export class Hub {
         return emit({ type: "thinking", itemId: params.itemId, turnId: params.turnId, delta: params.delta });
       case "item/started":
       case "item/completed":
+        // Generated images are kept for writing_publish; the browser only needs to know one was made.
+        if (params.item?.type === "imageGeneration") {
+          if (method === "item/completed" && !params.item.failure) keepGenerated(conversationId, params.item);
+          const { result: _image, ...item } = params.item;
+          return emit({ type: "item", phase: method === "item/started" ? "started" : "completed", item, turnId: params.turnId });
+        }
         return emit({ type: "item", phase: method === "item/started" ? "started" : "completed", item: params.item, turnId: params.turnId });
       case "error":
         return emit({ type: "error", message: params.error?.message ?? "Codex error", willRetry: params.willRetry });

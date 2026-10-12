@@ -172,7 +172,7 @@ function FullTest({ t }: { t: LibraryItem }) {
 /** A single passage, part or task: one compact row with what it practises. */
 function PartRow({ t }: { t: LibraryItem }) {
   // Reading drills list their question types; Speaking drills name their part (never its questions).
-  const focus = t.kind === "speaking" ? `Speaking · ${t.parts.join(", ")}` : t.families.map((f) => FAMILY_LABELS[f as keyof typeof FAMILY_LABELS] ?? f).join(", ");
+  const focus = t.kind === "speaking" ? `Speaking · ${t.parts.join(", ")}` : t.kind === "writing" ? `Writing · ${t.parts.join(", ")}` : t.families.map((f) => FAMILY_LABELS[f as keyof typeof FAMILY_LABELS] ?? f).join(", ");
   return (
     <li className="group relative first:rounded-t-2xl last:rounded-b-2xl">
       <button onClick={() => open(t)} className="flex w-full items-center gap-4 rounded-[inherit] px-5 py-3.5 text-left hover:bg-paper/60">

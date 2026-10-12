@@ -3,6 +3,7 @@ import { blockQuestions, type MarkedItem } from "@ielts/spec";
 import { submitAttempt, useTest, type ReadingPayload } from "../data.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { SpeakingScreen } from "./SpeakingScreen.tsx";
+import { WritingScreen } from "./WritingScreen.tsx";
 import { askTutor, exitTest, go } from "../router.ts";
 import { findEvidence, PassageView, type Highlight } from "./Passage.tsx";
 import { QuestionsView } from "./Questions.tsx";
@@ -16,6 +17,7 @@ type TestRoute = { id: string; review: boolean; q: number | null; part: number |
 export function TestScreen(props: TestRoute) {
   const { data, error } = useTest(props.id);
   if (data?.kind === "speaking") return <SpeakingScreen data={data} />;
+  if (data?.kind === "writing") return <WritingScreen data={data} />;
   return <ReadingScreen {...props} data={data as ReadingPayload | undefined} error={error} />;
 }
 
@@ -215,7 +217,7 @@ function ReadingScreen({ id, review: reviewRoute, q: startQ, part: startPart, da
   );
 }
 
-function Clock({ remaining }: { remaining: number }) {
+export function Clock({ remaining }: { remaining: number }) {
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
   const low = remaining <= 300;

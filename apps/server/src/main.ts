@@ -21,6 +21,9 @@ import {
   toCandidate,
   toSpeakingCandidate,
   transcriptLineSchema,
+  task1Label,
+  TASK2_NAMES,
+  writingTestSchema,
 } from "@ielts/spec";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
@@ -28,6 +31,9 @@ import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./codex/defaults.ts";
 import { markSpeaking } from "./speaking/marking.ts";
 import { SpeakingSessions } from "./speaking/sessions.ts";
 import { speakingPublish } from "./tools/speaking.ts";
+import { writingTools } from "./tools/writing.ts";
+import { figurePath, installReferences } from "./writing/images.ts";
+import { markWriting } from "./writing/marking.ts";
 import { answerDeleteRequest, deleteTest, manageTools } from "./tools/manage.ts";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -45,8 +51,9 @@ const codex = new CodexAppServer({
 });
 await codex.start();
 await codex.request("skills/extraRoots/set", { extraRoots: [SKILLS_DIR] });
+if (!installReferences()) console.error("No Cambridge figure references in corpus/derived/figure-refs: maps and process diagrams will be drawn without them.");
 
-const tools = new ToolRegistry([askLearner, showBrief, ...readingTools(codex), speakingPublish, ...reviewTools, ...manageTools]);
+const tools = new ToolRegistry([askLearner, showBrief, ...readingTools(codex), speakingPublish, ...writingTools(codex), ...reviewTools, ...manageTools]);
 const speaking = new SpeakingSessions(codex);
 const hub = new Hub(codex, tools);
 
@@ -116,7 +123,17 @@ app.get("/api/tests/:id", (c) => {
   const attempt = attempts.latest(row.id);
   const raw = JSON.parse(row.spec);
   // Answers (and Speaking questions) are only sent once the learner has submitted.
-  const test = row.kind === "speaking" ? (attempt ? speakingTestSchema.parse(raw) : toSpeakingCandidate(speakingTestSchema.parse(raw))) : attempt ? readingTestSchema.parse(raw) : toCandidate(readingTestSchema.parse(raw));
+  // Writing tasks are open from the start, as in the real booklet.
+  const test =
+    row.kind === "writing"
+      ? writingTestSchema.parse(raw)
+      : row.kind === "speaking"
+        ? attempt
+          ? speakingTestSchema.parse(raw)
+          : toSpeakingCandidate(speakingTestSchema.parse(raw))
+        : attempt
+          ? readingTestSchema.parse(raw)
+          : toCandidate(readingTestSchema.parse(raw));
   return c.json({
     id: row.id,
     conversationId: conversations.get(row.conversation_id) ? row.conversation_id : null,
@@ -126,6 +143,15 @@ app.get("/api/tests/:id", (c) => {
       ? { ...attempt, responses: JSON.parse(attempt.responses), result: JSON.parse(attempt.result), recording: row.kind === "speaking" && !!recordingFile(attempt.id) }
       : null,
   });
+});
+
+// Generated Task 1 images (maps and process diagrams).
+app.get("/api/figures/:id", (c) => {
+  try {
+    return c.body(readFileSync(figurePath(c.req.param("id"))), 200, { "content-type": "image/png", "cache-control": "max-age=31536000, immutable" });
+  } catch {
+    return c.json({ error: "Figure not found." }, 404);
+  }
 });
 
 app.delete("/api/tests/:id", (c) => {
@@ -152,7 +178,7 @@ app.delete("/api/attempts/:id", (c) => {
   const row = attempts.get(c.req.param("id"));
   if (!row) return c.json({ error: "Attempt not found." }, 404);
   const result = JSON.parse(row.result) as { kind?: string; unmarked?: string | null };
-  if (result.kind !== "speaking" || !result.unmarked) return c.json({ error: "Only an unmarked Speaking attempt can be cleared." }, 409);
+  if ((result.kind !== "speaking" && result.kind !== "writing") || !result.unmarked) return c.json({ error: "Only an unmarked Speaking or Writing attempt can be cleared." }, 409);
   attempts.delete(row.id);
   deleteRecording(row.id);
   return c.json({ ok: true });
@@ -251,9 +277,51 @@ async function submitSpeaking(row: NonNullable<ReturnType<typeof tests.get>>, bo
   return { id };
 }
 
+const writingSubmission = z.object({
+  responses: z.object({ "1": z.string().optional(), "2": z.string().optional() }),
+  elapsedSec: z.number().nullable().optional(),
+});
+
+/** Save the essays, then mark them in the background (a text model per task, a few minutes). */
+function submitWriting(row: NonNullable<ReturnType<typeof tests.get>>, body: unknown) {
+  const { responses, elapsedSec } = writingSubmission.parse(body);
+  const test = writingTestSchema.parse(JSON.parse(row.spec));
+  const id = randomUUID();
+  attempts.insert({ id, test_id: row.id, responses: JSON.stringify(responses), result: JSON.stringify({ kind: "writing", marking: 1 }), elapsed_sec: elapsedSec ?? null });
+  library.clearProgress(row.id);
+  (async () => {
+    let result;
+    try {
+      result = await markWriting(codex, test, responses);
+    } catch (err) {
+      console.error("writing marking failed", (err as Error).message);
+      result = { kind: "writing", band: null, tasks: {}, unmarked: "Marking failed. Please submit the test again." };
+    }
+    attempts.setResult(id, result);
+    appEvents.add(row.conversation_id, "score", { testId: row.id });
+    hub.notify(row.conversation_id, { type: "card", card: { kind: "score", testId: row.id } });
+    await hub
+      .injectContext(
+        row.conversation_id,
+        `The learner submitted the Writing test "${row.title}" (test ${row.id}). ` +
+          (result.band != null ? `Estimated band ${result.band}. ` : `Not marked: ${result.unmarked} `) +
+          "A score card is already shown. Use get_test_result to read their writing and the marker's evidence before discussing it.",
+      )
+      .catch((err) => console.error("inject failed", err.message));
+  })();
+  return { id };
+}
+
 app.post("/api/tests/:id/attempts", async (c) => {
   const row = tests.get(c.req.param("id"));
   if (!row) return c.json({ error: "Test not found." }, 404);
+  if (row.kind === "writing") {
+    try {
+      return c.json(submitWriting(row, await c.req.json()));
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  }
   if (row.kind === "speaking") {
     try {
       return c.json(await submitSpeaking(row, await c.req.json()));
@@ -285,6 +353,11 @@ app.get("/api/tests", (c) =>
     library.list().map(({ answered, spec, ...r }) => {
       const answeredCount = answered ? Object.values(JSON.parse(answered) as Record<string, string>).filter((v) => v?.trim()).length : 0;
       const status = r.submitted_at !== null ? (r.marking ? "marking" : "scored") : answeredCount > 0 ? "in_progress" : "not_started";
+      if (r.kind === "writing") {
+        const t = writingTestSchema.parse(JSON.parse(spec));
+        const parts = [t.task1 && `Task 1: ${task1Label(t.task1)}`, t.task2 && `Task 2: ${TASK2_NAMES[t.task2.family]}`];
+        return { ...r, answeredCount, status, parts: parts.filter(Boolean), families: [] };
+      }
       if (r.kind === "speaking") {
         // Only the outline: Speaking questions stay hidden until the test is taken.
         const parts = speakingParts(speakingTestSchema.parse(JSON.parse(spec)));
@@ -309,7 +382,7 @@ app.get("/api/progress", (c) => {
   const history = rows.flatMap((r) => {
     const result = JSON.parse(r.result);
     // Speaking still being marked, or too short to mark, has no score yet.
-    if (result.kind === "speaking" && result.band == null) return [];
+    if ((result.kind === "speaking" || result.kind === "writing") && result.band == null) return [];
     for (const i of result.items ?? []) {
       const f = (families[i.key.family] ??= { correct: 0, total: 0, skill: r.kind });
       f.total += 1;
