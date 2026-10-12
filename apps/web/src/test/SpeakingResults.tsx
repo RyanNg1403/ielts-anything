@@ -1,11 +1,14 @@
 import { SPEAKING_CRITERIA, SPEAKING_CRITERION_NAMES, type SpeakingResult } from "@ielts/spec";
 import { SpeakingBands } from "../components/cards/SpeakingCards.tsx";
-import type { SpeakingPayload } from "../data.ts";
+import { useState } from "react";
+import { retakeSpeaking, type SpeakingPayload } from "../data.ts";
 import { exitTest } from "../router.ts";
 
-/** Speaking results: bands, examiner-style feedback with the learner's own words, and the interview. */
+/** Speaking results: bands, the examiner's own assessment of each criterion, and the interview. */
 export function SpeakingResults({ data, result }: { data: SpeakingPayload; result: SpeakingResult }) {
   const a = result.assessment;
+  const [error, setError] = useState<string | null>(null);
+  const retake = () => data.attempt && retakeSpeaking(data.id, data.attempt.id).catch((err) => setError(err.message));
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-paper">
       <header className="flex h-14 items-center border-b border-rule bg-surface px-4">
@@ -19,7 +22,18 @@ export function SpeakingResults({ data, result }: { data: SpeakingPayload; resul
       <main className="mx-auto max-w-[680px] px-6 py-12">
         <h1 className="font-serif text-[28px] font-semibold leading-tight text-ink">{data.test.title}</h1>
         <div className="mt-8 rounded-2xl border border-rule bg-surface p-6 shadow-[var(--shadow-card)]">
-          <SpeakingBands result={result} />
+          {a ? (
+            <SpeakingBands result={result} />
+          ) : (
+            <>
+              <p className="font-serif text-[22px] text-ink">Not marked</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{result.unmarked}</p>
+              <button onClick={retake} className="mt-5 h-10 rounded-xl bg-primary px-4 text-[14px] font-medium text-on-primary hover:bg-primary-hover">
+                Take the test again
+              </button>
+              {error && <p role="alert" className="mt-3 text-[14px] text-danger">{error}</p>}
+            </>
+          )}
         </div>
         {data.attempt?.recording && (
           <section className="mt-8">
@@ -36,41 +50,17 @@ export function SpeakingResults({ data, result }: { data: SpeakingPayload; resul
                   <span>{SPEAKING_CRITERION_NAMES[c]}</span>
                   <span className="tabular-nums">{a[c].band}</span>
                 </h2>
-                <p className="mt-3 text-[15.5px] leading-relaxed text-ink">{a[c].summary}</p>
-                {a[c].strengths.length > 0 && (
-                  <ul className="mt-5 space-y-3">
-                    {a[c].strengths.map((s, i) => (
-                      <li key={i} className="text-[15px] leading-relaxed">
-                        <q className="font-serif text-ink">{s.quote}</q>
-                        <span className="text-ink-soft"> {s.note}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {a[c].improvements.length > 0 && (
-                  <ul className="mt-5 space-y-3">
-                    {a[c].improvements.map((s, i) => (
-                      <li key={i} className="rounded-xl bg-surface px-4 py-3 text-[15px] leading-relaxed shadow-[var(--shadow-card)]">
-                        <p>
-                          <q className="font-serif text-ink-soft line-through decoration-danger/60">{s.quote}</q>
-                        </p>
-                        <p className="mt-1 font-serif text-ink">{s.better}</p>
-                        <p className="mt-1.5 text-[14px] text-ink-soft">{s.issue}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <p className="mt-3 text-[15.5px] leading-relaxed text-ink">{a[c].evidence}</p>
+                {a[c].descriptor && <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">{a[c].descriptor}</p>}
               </section>
             ))}
 
-            <section className="mt-12">
-              <h2 className="font-serif text-[21px] text-ink">What to practise next</h2>
-              <ol className="mt-3 list-decimal space-y-2 pl-5 text-[15.5px] leading-relaxed text-ink">
-                {a.nextSteps.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ol>
-            </section>
+            {a.nextSteps && (
+              <section className="mt-12">
+                <h2 className="font-serif text-[21px] text-ink">What to practise next</h2>
+                <p className="mt-3 text-[15.5px] leading-relaxed text-ink">{a.nextSteps}</p>
+              </section>
+            )}
           </>
         )}
 
@@ -82,6 +72,7 @@ export function SpeakingResults({ data, result }: { data: SpeakingPayload; resul
             </svg>
           </summary>
           <div className="space-y-3 border-t border-rule px-5 py-5">
+            <p className="text-[13px] text-ink-faint">Written by speech recognition, which spells words correctly even when they were mispronounced. For pronunciation, listen to the recording.</p>
             {result.transcript.map((l, i) => {
               const newPart = i === 0 || result.transcript[i - 1]!.part !== l.part;
               return (

@@ -24,14 +24,14 @@ import {
 } from "@ielts/spec";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
-import { assessSpeaking } from "./codex/assessor.ts";
 import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./codex/defaults.ts";
+import { markSpeaking } from "./speaking/marking.ts";
 import { SpeakingSessions } from "./speaking/sessions.ts";
 import { speakingPublish } from "./tools/speaking.ts";
 import { answerDeleteRequest, deleteTest, manageTools } from "./tools/manage.ts";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { recordingExt, recordingFile, saveRecording } from "./recordings.ts";
+import { deleteRecording, recordingExt, recordingFile, saveRecording } from "./recordings.ts";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const SKILLS_DIR = fileURLToPath(new URL("../../../skills", import.meta.url));
@@ -147,6 +147,17 @@ app.put("/api/attempts/:id/recording", async (c) => {
   return c.json({ ok: true });
 });
 
+/** Clear a Speaking attempt that could not be marked, so the test can be taken again. */
+app.delete("/api/attempts/:id", (c) => {
+  const row = attempts.get(c.req.param("id"));
+  if (!row) return c.json({ error: "Attempt not found." }, 404);
+  const result = JSON.parse(row.result) as { kind?: string; unmarked?: string | null };
+  if (result.kind !== "speaking" || !result.unmarked) return c.json({ error: "Only an unmarked Speaking attempt can be cleared." }, 409);
+  attempts.delete(row.id);
+  deleteRecording(row.id);
+  return c.json({ ok: true });
+});
+
 app.get("/api/attempts/:id/recording", (c) => {
   const file = recordingFile(c.req.param("id"));
   if (!file) return c.json({ error: "No recording for this attempt." }, 404);
@@ -210,7 +221,7 @@ const speakingSubmission = z.object({
   elapsedSec: z.number().nullable().optional(),
 });
 
-/** Speaking is marked by Codex, which takes a minute: save now, mark in the background. */
+/** Save the attempt, then mark it from the examiner's spoken assessment. */
 async function submitSpeaking(row: NonNullable<ReturnType<typeof tests.get>>, body: unknown) {
   const { transcript, metrics, elapsedSec, examinerSaid } = speakingSubmission.parse(body);
   const id = randomUUID();
@@ -219,7 +230,7 @@ async function submitSpeaking(row: NonNullable<ReturnType<typeof tests.get>>, bo
   (async () => {
     let result: unknown;
     try {
-      result = await assessSpeaking(codex, transcript, examinerSaid ?? null);
+      result = markSpeaking(transcript, examinerSaid ?? null);
     } catch (err) {
       console.error("speaking marking failed", (err as Error).message);
       result = { kind: "speaking", band: null, assessment: null, transcript, candidateWords: 0, examinerSaid: examinerSaid ?? null, unmarked: "Marking failed. Please take the test again." };
@@ -233,7 +244,7 @@ async function submitSpeaking(row: NonNullable<ReturnType<typeof tests.get>>, bo
         row.conversation_id,
         `The learner took the Speaking test "${row.title}" (test ${row.id}). ` +
           (r.band != null ? `Estimated band ${r.band}. ` : `Not marked: ${r.unmarked} `) +
-          "A score card is already shown. Use get_test_result to see the transcript and the examiner-style feedback before discussing it.",
+          "A score card is already shown. Use get_test_result to see the transcript and the examiner's assessment before discussing it.",
       )
       .catch((err) => console.error("inject failed", err.message));
   })();

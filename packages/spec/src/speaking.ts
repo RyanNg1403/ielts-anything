@@ -144,29 +144,47 @@ export const ASSESSMENT_HEADINGS = {
 
 const NUMBER_WORDS: Record<string, number> = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
 
+const BAND_PATTERNS: Record<SpeakingCriterion, RegExp> = {
+  fluency: /fluency(?: and coherence)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/gi,
+  lexical: /lexical(?: resource)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/gi,
+  grammar: /grammatical(?: range)?(?: and accuracy)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/gi,
+  pronunciation: /pronunciation[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/gi,
+};
+
 /**
- * Read the four criterion bands from the examiner's spoken assessment, e.g.
- * "Fluency and coherence: band seven. ..." Speech recognition may write numbers as words.
- * Returns null unless all four are present.
+ * Split the examiner's spoken assessment into its parts, in its own words: per criterion the
+ * evidence, the descriptor it matched and the band ("... Fluency and coherence band 7."), then the
+ * next steps. The last "<criterion> band N" decides, so a band mentioned in the evidence does not.
+ * Speech recognition may write numbers as words. Returns null unless all four bands are present.
  */
-export function parseSpokenBands(text: string): Record<SpeakingCriterion, number> | null {
-  const t = text.toLowerCase();
-  const patterns: Record<SpeakingCriterion, RegExp> = {
-    fluency: /fluency(?: and coherence)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/g,
-    lexical: /lexical(?: resource)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/g,
-    grammar: /grammatical(?: range)?(?: and accuracy)?[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/g,
-    pronunciation: /pronunciation[^a-z0-9]{0,6}(?:is |gets |at )?band[^a-z0-9]{0,3}(\d|zero|one|two|three|four|five|six|seven|eight|nine)\b/g,
-  };
-  const out = {} as Record<SpeakingCriterion, number>;
+export function parseSpokenAssessment(text: string): SpeakingAssessment | null {
+  const out = {} as SpeakingAssessment;
+  let from = Math.max(0, text.search(/\bassessment\b/i));
   for (const c of SPEAKING_CRITERIA) {
-    const m = [...t.matchAll(patterns[c])].at(-1);
+    const m = [...text.matchAll(BAND_PATTERNS[c])].at(-1);
     if (!m) return null;
-    const v = /\d/.test(m[1]!) ? Number(m[1]) : NUMBER_WORDS[m[1]!]!;
-    if (!(v >= 0 && v <= 9)) return null;
-    out[c] = v;
+    const word = m[1]!.toLowerCase();
+    const band = /\d/.test(word) ? Number(word) : NUMBER_WORDS[word]!;
+    if (!(band >= 0 && band <= 9)) return null;
+    const section = m.index >= from ? text.slice(from, m.index) : "";
+    const body = section.replace(/^\W*(assessment\W+)?(fluency and coherence|lexical resource|grammatical range and accuracy|pronunciation)?\W*/i, "");
+    const at = body.search(/descriptor\s*:/i);
+    out[c] = {
+      band,
+      evidence: tidy((at === -1 ? body : body.slice(0, at)).replace(/^evidence\s*:?\s*/i, "")),
+      descriptor: at === -1 ? "" : tidy(body.slice(at).replace(/^descriptor\s*:?\s*/i, "")),
+    };
+    from = Math.max(from, m.index + m[0].length);
   }
+  const next = text.slice(from).match(/next steps\s*:?\s*([\s\S]*?)(?:end of (?:the )?assessment|$)/i);
+  out.nextSteps = next ? tidy(next[1]!) : "";
   return out;
 }
+
+const tidy = (s: string) => {
+  const t = s.replace(/\s+/g, " ").replace(/^[\s.,;:]+|[\s,;:]+$/g, "").trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 
 // ---- Marking ----
 
@@ -186,22 +204,11 @@ export const transcriptLineSchema = z.object({
 });
 export type TranscriptLine = z.infer<typeof transcriptLineSchema>;
 
-const criterionAssessment = z.object({
-  band: z.number().int().min(0).max(9),
-  summary: z.string().describe("Two or three sentences on this criterion, specific to what the candidate said."),
-  strengths: z.array(z.object({ quote: z.string(), note: z.string() })).describe("Up to three, each quoting the candidate."),
-  improvements: z.array(z.object({ quote: z.string(), issue: z.string(), better: z.string() })).describe("Up to four, each quoting the candidate."),
-});
+/** One criterion of the examiner's spoken assessment, in its own words. */
+export type CriterionAssessment = { band: number; evidence: string; descriptor: string };
 
-/** What the assessor returns; the overall band is computed from it, never chosen by the model. */
-export const speakingAssessmentSchema = z.object({
-  fluency: criterionAssessment,
-  lexical: criterionAssessment,
-  grammar: criterionAssessment,
-  pronunciation: criterionAssessment,
-  nextSteps: z.array(z.string()).describe("One to three concrete things to practise next."),
-});
-export type SpeakingAssessment = z.infer<typeof speakingAssessmentSchema>;
+/** The examiner's assessment; the overall band is computed from it, never chosen by a model. */
+export type SpeakingAssessment = Record<SpeakingCriterion, CriterionAssessment> & { nextSteps: string };
 
 /** IELTS overall: the mean of the four criteria, rounded to the nearest half band (.25 and .75 round up). */
 export function speakingOverall(a: Pick<SpeakingAssessment, SpeakingCriterion>) {
@@ -220,6 +227,26 @@ export type SpeakingResult = {
   transcript: TranscriptLine[];
   candidateWords: number;
 };
+
+/**
+ * Examiner turns that go on after their question, i.e. the examiner answering for the candidate.
+ * A turn is the examiner's consecutive lines; it counts when 15 or more words follow its last "?"
+ * (the closing sentence excluded).
+ */
+export function examinerSelfAnswers(lines: TranscriptLine[]) {
+  const turns: string[] = [];
+  let turn = "";
+  for (const l of [...lines, { role: "candidate" as const, part: 1 as const, text: "" }]) {
+    if (l.role === "examiner") turn = turn ? `${turn} ${l.text}` : l.text;
+    else if (turn) (turns.push(turn), (turn = ""));
+  }
+  return turns.filter((t) => {
+    const at = t.lastIndexOf("?");
+    if (at === -1) return false;
+    const after = t.slice(at + 1).replace(/thank you\.?\s*that is the end of the (speaking )?test\.?/i, "");
+    return after.split(/\s+/).filter(Boolean).length >= 15;
+  });
+}
 
 export function candidateWordCount(lines: TranscriptLine[]) {
   return lines.filter((l) => l.role === "candidate").reduce((n, l) => n + l.text.split(/\s+/).filter(Boolean).length, 0);

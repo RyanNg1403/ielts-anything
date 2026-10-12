@@ -27,7 +27,8 @@ export const getTestResult = defineTool({
   name: "get_test_result",
   description:
     "Get a submitted test's results. Reading: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote and the explanation. " +
-    "Speaking: the questions, the transcript of the interview, and the band and feedback for each criterion. Use before explaining answers or discussing a score.",
+    "Speaking: the questions, the transcript of the interview, and the examiner's band and assessment for each criterion. The transcript is speech recognition: it shows the words, " +
+      "grammar and hesitations, but spells mispronounced words correctly, so never use it as evidence about pronunciation. Use before explaining answers or discussing a score.",
   input: z.object({ testId: z.string() }),
   async run({ testId }) {
     const row = tests.get(testId);

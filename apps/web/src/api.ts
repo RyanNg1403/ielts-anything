@@ -303,10 +303,10 @@ export function useConversation(conversationId: string | null, initial?: { curre
           if (e.phase === "completed" && it.type === "agentMessage") {
             setEntries((xs) => xs.map((x) => (x.kind === "agent" && x.id === it.id ? { ...x, text: it.text } : x)));
           }
-          if (e.phase === "completed" && it.type === "dynamicToolCall" && it.tool === "ask_learner") {
-            const done = entryFromToolCall(it);
-            if (done && done.kind === "ask")
-              setEntries((xs) => xs.map((x) => (x.kind === "ask" && x.answers === null ? { ...x, answers: done.answers } : x)));
+          // The tutor's form: shown once its call has returned; it is answered as the next message.
+          if (e.phase === "completed" && it.type === "dynamicToolCall" && it.tool === "ask_learner" && it.success) {
+            const form = entryFromToolCall(it);
+            if (form) setEntries((xs) => (xs.some((x) => x.id === form.id) ? xs : [...xs, form]));
           }
           // A test was published or changed in place: refresh every view of it.
           if (e.phase === "completed" && it.type === "dynamicToolCall" && (it.tool === "reading_finalize" || it.tool === "speaking_publish") && it.success)

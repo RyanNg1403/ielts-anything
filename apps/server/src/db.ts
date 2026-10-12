@@ -186,6 +186,9 @@ export const attempts = {
   get(id: string) {
     return db.prepare("select * from attempts where id = ?").get(id) as AttemptRow | undefined;
   },
+  delete(id: string) {
+    db.prepare("delete from attempts where id = ?").run(id);
+  },
   latest(testId: string) {
     return db.prepare("select * from attempts where test_id = ? order by submitted_at desc limit 1").get(testId) as AttemptRow | undefined;
   },
