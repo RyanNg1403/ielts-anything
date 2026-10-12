@@ -1,6 +1,6 @@
 // Shared server data with a tiny cache so cards, pages and the sidebar stay in sync.
 import { useEffect, useState } from "react";
-import type { ReadingTest, ReadingResult } from "@ielts/spec";
+import type { ReadingTest, ReadingResult, SpeakingCandidate, SpeakingResult, SpeakingTest } from "@ielts/spec";
 
 export type LibraryItem = {
   id: string;
@@ -13,27 +13,41 @@ export type LibraryItem = {
   total: number | null;
   band: number | null;
   submitted_at: number | null;
-  status: "not_started" | "in_progress" | "scored";
+  status: "not_started" | "in_progress" | "marking" | "scored";
   answeredCount: number;
   parts: string[];
   families: string[];
 };
 
-export type TestPayload = {
+type PayloadBase = {
   id: string;
   /** null when the chat that made the test has been deleted. */
   conversationId: string | null;
-  kind: string;
+};
+
+export type ReadingPayload = PayloadBase & {
+  kind: "reading";
   test: ReadingTest;
   attempt: { responses: Record<string, string>; result: ReadingResult; elapsed_sec: number | null; submitted_at: number } | null;
 };
+
+/** Before the test is taken the learner only gets the outline; questions arrive with the result. */
+export type SpeakingPayload = PayloadBase & {
+  kind: "speaking";
+  test: SpeakingCandidate | SpeakingTest;
+  attempt: { id: string; result: SpeakingResult | { kind: "speaking"; marking: 1 }; elapsed_sec: number | null; submitted_at: number; recording?: boolean } | null;
+};
+
+export type TestPayload = ReadingPayload | SpeakingPayload;
+
+export const isMarking = (a: SpeakingPayload["attempt"]): boolean => !!a && "marking" in a.result;
 
 export type ProgressPayload = {
   history: { testId: string; title: string; skill: string; mode: string; raw: number; total: number; band: number | null; submittedAt: number }[];
   families: Record<string, { correct: number; total: number; skill: string }>;
 };
 
-type Entry<T> = { value?: T; promise?: Promise<T>; listeners: Set<() => void> };
+type Entry<T> = { value?: T; error?: string; promise?: Promise<T>; listeners: Set<() => void> };
 const cache = new Map<string, Entry<unknown>>();
 
 function entry<T>(key: string): Entry<T> {
@@ -45,12 +59,23 @@ function entry<T>(key: string): Entry<T> {
 async function load<T>(key: string): Promise<T> {
   const e = entry<T>(key);
   e.promise = fetch(key).then(async (r) => {
-    if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? `Request failed (${r.status})`);
+    if (!r.ok) throw Object.assign(new Error((await r.json().catch(() => null))?.error ?? `Request failed (${r.status})`), { status: r.status });
     return r.json() as Promise<T>;
   });
-  e.value = await e.promise;
-  e.listeners.forEach((l) => l());
-  return e.value;
+  try {
+    e.value = await e.promise;
+    e.error = undefined;
+    return e.value;
+  } catch (err) {
+    // A resource that is gone (e.g. a deleted test) must not keep showing its last value.
+    if ((err as { status?: number }).status === 404 || e.value === undefined) {
+      e.value = undefined;
+      e.error = (err as Error).message;
+    }
+    throw err;
+  } finally {
+    e.listeners.forEach((l) => l());
+  }
 }
 
 /** Re-fetch everything that matches (e.g. after a submission). */
@@ -60,19 +85,18 @@ export function invalidate(prefix: string) {
 
 export function useResource<T>(key: string | null): { data: T | undefined; error: string | null; reload: () => void } {
   const [, force] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!key) return;
     const e = entry<T>(key);
     const l = () => force((n) => n + 1);
     e.listeners.add(l);
-    if (e.value === undefined && !e.promise) load<T>(key).catch((err) => setError(err.message));
+    if (e.value === undefined && !e.promise) load<T>(key).catch(() => {});
     return () => {
       e.listeners.delete(l);
     };
   }, [key]);
-  const data = key ? (entry<T>(key).value as T | undefined) : undefined;
-  return { data, error, reload: () => key && load(key).catch((err) => setError(err.message)) };
+  const e = key ? entry<T>(key) : null;
+  return { data: e?.value, error: e?.error ?? null, reload: () => key && load(key).catch(() => {}) };
 }
 
 export const useLibrary = () => useResource<LibraryItem[]>("/api/tests");
@@ -81,6 +105,14 @@ export const useProgress = () => useResource<ProgressPayload>("/api/progress");
 
 export async function renameConversation(id: string, title: string) {
   await fetch(`/api/conversations/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ title }) });
+  invalidate("/api/conversations");
+}
+
+export async function deleteTest(id: string) {
+  const res = await fetch(`/api/tests/${id}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 404) throw new Error((await res.json().catch(() => null))?.error ?? "Deleting failed.");
+  invalidate("/api/tests");
+  invalidate("/api/progress");
   invalidate("/api/conversations");
 }
 
@@ -96,21 +128,9 @@ export async function submitAttempt(testId: string, responses: Record<string, st
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ responses, elapsedSec }),
   });
-  if (!r.ok) throw new Error("Submitting failed. Your answers are saved; try again.");
+  if (!r.ok) throw new Error("Submitting failed. Try again; your answers are still here.");
   invalidate("/api/tests");
   invalidate("/api/progress");
   invalidate("/api/conversations");
   return r.json();
-}
-
-export function saveProgress(testId: string, responses: Record<string, string>, elapsedSec: number) {
-  return fetch(`/api/tests/${testId}/progress`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ responses, elapsedSec }),
-  });
-}
-
-export async function loadProgress(testId: string): Promise<{ responses: Record<string, string>; elapsedSec: number } | null> {
-  return (await fetch(`/api/tests/${testId}/progress`)).json();
 }

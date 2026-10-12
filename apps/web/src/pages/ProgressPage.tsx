@@ -81,7 +81,7 @@ function SkillTile({ skill, label, history }: { skill: string; label: string; hi
               <span className="block font-serif text-[40px] font-semibold leading-none text-ink">
                 {latest ? latest.band!.toFixed(1) : lastDrill ? `${lastDrill.raw}/${lastDrill.total}` : "—"}
               </span>
-              <span className="mt-1 block text-[13px] text-ink-soft">{latest ? "Band, latest full test" : "Latest drill"}</span>
+              <span className="mt-1 block text-[13px] text-ink-soft">{latest ? (skill === "speaking" ? "Band, latest test" : "Band, latest full test") : "Latest drill"}</span>
             </p>
             <Trend points={full} />
           </div>
@@ -119,7 +119,8 @@ function Trend({ points }: { points: Point[] }) {
         <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-max max-w-[16rem] rounded-md bg-ink px-2.5 py-1.5 text-[12px] text-on-primary shadow">
           <p className="truncate font-medium">{h.title}</p>
           <p className="text-surface/75">
-            Band {h.band!.toFixed(1)} · {h.raw}/{h.total} · {new Date(h.submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+            Band {h.band!.toFixed(1)}
+            {h.total ? ` · ${h.raw}/${h.total}` : ""} · {new Date(h.submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
           </p>
         </div>
       )}

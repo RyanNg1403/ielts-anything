@@ -3,13 +3,15 @@
 import { randomUUID } from "node:crypto";
 import { CodexAppServer, type Notification, type ServerRequest } from "./codex/app-server.ts";
 import { createHash } from "node:crypto";
-import { conversationThreads, conversations } from "./db.ts";
-import { DEVELOPER_INSTRUCTIONS } from "./instructions.ts";
+import { appEvents, conversationThreads, conversations } from "./db.ts";
+import { DEVELOPER_INSTRUCTIONS, VOICE_PROMPT } from "./instructions.ts";
 import type { ToolRegistry } from "./tools/registry.ts";
 import { WORKSPACE } from "./codex/home.ts";
+import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./codex/defaults.ts";
 
 export type ClientEvent = Record<string, unknown> & { type: string };
 type Listener = (event: ClientEvent) => void;
+export type TurnOptions = { effort?: string; model?: string; fast?: boolean };
 type PendingAsk = { conversationId: string; resolve: (answer: unknown) => void; event: ClientEvent };
 
 export class Hub {
@@ -18,6 +20,8 @@ export class Hub {
   private pendingAsks = new Map<string, PendingAsk>();
   private loadedThreads = new Set<string>();
   private activeTurns = new Map<string, string>();
+  private sdpWaiters = new Map<string, (sdp: string) => void>();
+  private voiceThreads = new Map<string, string>();
 
   constructor(
     private readonly codex: CodexAppServer,
@@ -141,13 +145,16 @@ export class Hub {
     this.loadedThreads.add(threadId);
   }
 
-  async send(conversationId: string, text: string, opts: { effort?: string } = {}) {
+  async send(conversationId: string, text: string, opts: TurnOptions = {}) {
     const row = conversations.get(conversationId);
     if (!row) throw new Error(`unknown conversation ${conversationId}`);
     const threadId = await this.activeThread(conversationId);
     if (row.title === "New practice") {
       const m = text.match(/^<practice skill="(\w+)" mode="\w+"\/>\n/);
-      const body = (m ? text.slice(m[0].length) : text).replace(/@\[([^\]]+)\]\(test:[0-9a-f-]{36}\)/g, "$1");
+      const raw = m ? text.slice(m[0].length) : text;
+      // A chat that opens by mentioning a test is about that test.
+      const mention = raw.match(/@\[([^\]]+)\]\(test:[0-9a-f-]{36}\)/);
+      const body = mention ? mention[1]! : raw;
       conversations.update(conversationId, { title: body.slice(0, 60), skill: m?.[1] ?? null });
     }
     conversations.touch(conversationId);
@@ -155,17 +162,49 @@ export class Hub {
       threadId,
       input: [{ type: "text", text, text_elements: [] }],
       // Test generation needs real reasoning; the model's own default (often "low") is too shallow.
-      effort: opts.effort ?? process.env.IELTS_EFFORT ?? "medium",
+      model: opts.model ?? DEFAULT_MODEL,
+      effort: opts.effort ?? DEFAULT_EFFORT,
+      serviceTierForTurn: opts.fast ? "priority" : "default",
       // Summaries of the tutor's reasoning feed the work log under each message.
       summary: "concise",
     });
   }
 
   async interrupt(conversationId: string) {
-    const row = conversations.get(conversationId);
-    if (!row) return;
-    const turnId = this.activeTurns.get(row.thread_id);
-    if (turnId) await this.codex.request("turn/interrupt", { threadId: row.thread_id, turnId });
+    for (const { thread_id } of conversationThreads.list(conversationId)) {
+      const turnId = this.activeTurns.get(thread_id);
+      if (turnId) await this.codex.request("turn/interrupt", { threadId: thread_id, turnId });
+    }
+  }
+
+  /**
+   * Start a spoken conversation on the chat's own thread (Codex realtime over WebRTC). The voice
+   * hands real work (making or starting tests) to the tutor, whose turns stream into the chat.
+   * Returns the SDP answer for the browser's peer connection.
+   */
+  async startVoice(conversationId: string, offerSdp: string) {
+    const threadId = await this.activeThread(conversationId);
+    const answer = new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("The voice session did not start. Try again.")), 20000);
+      this.sdpWaiters.set(threadId, (sdp) => (clearTimeout(timer), resolve(sdp)));
+    });
+    await this.codex.request("thread/realtime/start", {
+      threadId,
+      // On a ChatGPT login only WebRTC with realtime v3 and its own voices works.
+      version: "v3",
+      voice: process.env.IELTS_VOICE ?? "juniper",
+      outputModality: "audio",
+      transport: { type: "webrtc", sdp: offerSdp },
+      prompt: VOICE_PROMPT,
+    });
+    this.voiceThreads.set(conversationId, threadId);
+    return answer;
+  }
+
+  async stopVoice(conversationId: string) {
+    const threadId = this.voiceThreads.get(conversationId);
+    this.voiceThreads.delete(conversationId);
+    if (threadId) await this.codex.request("thread/realtime/stop", { threadId }).catch(() => {});
   }
 
   /** Full history for re-rendering a conversation, across all of its threads. */
@@ -226,6 +265,21 @@ export class Hub {
         return emit({ type: "item", phase: method === "item/started" ? "started" : "completed", item: params.item, turnId: params.turnId });
       case "error":
         return emit({ type: "error", message: params.error?.message ?? "Codex error", willRetry: params.willRetry });
+      case "thread/realtime/sdp":
+        this.sdpWaiters.get(params.threadId)?.(params.sdp);
+        this.sdpWaiters.delete(params.threadId);
+        return;
+      case "thread/realtime/transcript/delta":
+        return emit({ type: "voice", event: "delta", role: params.role, delta: params.delta });
+      case "thread/realtime/transcript/done":
+        // Realtime speech is not part of the thread's turns, so keep it for the chat history.
+        if (params.text?.trim()) appEvents.add(conversationId, "voice", { role: params.role, text: params.text });
+        return emit({ type: "voice", event: "done", role: params.role, text: params.text });
+      case "thread/realtime/closed":
+        this.voiceThreads.delete(conversationId);
+        return emit({ type: "voice", event: "closed", reason: params.reason });
+      case "thread/realtime/error":
+        return emit({ type: "voice", event: "error", message: params.message });
     }
   }
 

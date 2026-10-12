@@ -1,8 +1,8 @@
 import { ScoreSummary } from "../components/ScoreSummary.tsx";
-import type { TestPayload } from "../data.ts";
+import type { ReadingPayload } from "../data.ts";
 import { exitTest, go } from "../router.ts";
 
-export function Results({ data }: { data: TestPayload }) {
+export function Results({ data }: { data: ReadingPayload }) {
   const { test, attempt } = data;
   const result = attempt!.result;
   return (

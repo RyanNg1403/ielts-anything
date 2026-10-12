@@ -11,8 +11,27 @@ import { ToolRegistry } from "./tools/registry.ts";
 import { readingTools } from "./tools/reading.ts";
 import { appEvents, attempts, library, tests } from "./db.ts";
 import { reviewTools } from "./tools/review.ts";
-import { markReading, readingTestSchema, toCandidate } from "@ielts/spec";
+import {
+  markReading,
+  readingTestSchema,
+  speakingMetricsSchema,
+  speakingParts,
+  speakingTestSchema,
+  SPEAKING_PART_NAMES,
+  toCandidate,
+  toSpeakingCandidate,
+  transcriptLineSchema,
+} from "@ielts/spec";
+import { streamSSE } from "hono/streaming";
+import { z } from "zod";
+import { assessSpeaking } from "./codex/assessor.ts";
+import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./codex/defaults.ts";
+import { SpeakingSessions } from "./speaking/sessions.ts";
+import { speakingPublish } from "./tools/speaking.ts";
+import { answerDeleteRequest, deleteTest, manageTools } from "./tools/manage.ts";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { recordingExt, recordingFile, saveRecording } from "./recordings.ts";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const SKILLS_DIR = fileURLToPath(new URL("../../../skills", import.meta.url));
@@ -27,7 +46,8 @@ const codex = new CodexAppServer({
 await codex.start();
 await codex.request("skills/extraRoots/set", { extraRoots: [SKILLS_DIR] });
 
-const tools = new ToolRegistry([askLearner, showBrief, ...readingTools(codex), ...reviewTools]);
+const tools = new ToolRegistry([askLearner, showBrief, ...readingTools(codex), speakingPublish, ...reviewTools, ...manageTools]);
+const speaking = new SpeakingSessions(codex);
 const hub = new Hub(codex, tools);
 
 const app = new Hono();
@@ -35,6 +55,40 @@ const app = new Hono();
 app.get("/api/status", async (c) => {
   const account = await codex.request("account/read", { refreshToken: false }).catch(() => null);
   return c.json({ codexRunning: codex.running, loggedIn, account });
+});
+
+// The models the learner's Codex account offers, for the composer's model picker.
+let models: unknown = null;
+app.get("/api/models", async (c) => {
+  if (!models) {
+    const r: any = await codex.request("model/list", {});
+    models = r.data
+      .filter((m: any) => !m.hidden)
+      .map((m: any) => ({
+        id: m.id,
+        name: m.displayName,
+        description: m.description,
+        // The app's default, not the account's: the composer starts on it.
+        isDefault: m.id === DEFAULT_MODEL,
+        efforts: m.supportedReasoningEfforts.map((e: any) => e.reasoningEffort),
+        fast: m.serviceTiers.find((t: any) => t.id === "priority")?.description ?? null,
+      }));
+  }
+  return c.json({ models, defaultEffort: DEFAULT_EFFORT });
+});
+
+app.post("/api/conversations/:id/voice", async (c) => {
+  const { sdp } = await c.req.json<{ sdp: string }>();
+  try {
+    return c.json({ sdp: await hub.startVoice(c.req.param("id"), sdp) });
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 502);
+  }
+});
+
+app.delete("/api/conversations/:id/voice", async (c) => {
+  await hub.stopVoice(c.req.param("id"));
+  return c.json({ ok: true });
 });
 
 app.get("/api/conversations", (c) => c.json(conversations.list()));
@@ -59,21 +113,143 @@ app.get("/api/conversations/:id/tests", (c) => c.json(tests.forConversation(c.re
 app.get("/api/tests/:id", (c) => {
   const row = tests.get(c.req.param("id"));
   if (!row) return c.json({ error: "Test not found." }, 404);
-  const spec = readingTestSchema.parse(JSON.parse(row.spec));
   const attempt = attempts.latest(row.id);
+  const raw = JSON.parse(row.spec);
+  // Answers (and Speaking questions) are only sent once the learner has submitted.
+  const test = row.kind === "speaking" ? (attempt ? speakingTestSchema.parse(raw) : toSpeakingCandidate(speakingTestSchema.parse(raw))) : attempt ? readingTestSchema.parse(raw) : toCandidate(readingTestSchema.parse(raw));
   return c.json({
     id: row.id,
     conversationId: conversations.get(row.conversation_id) ? row.conversation_id : null,
     kind: row.kind,
-    // Answers are only sent once the learner has submitted.
-    test: attempt ? spec : toCandidate(spec),
-    attempt: attempt ? { ...attempt, responses: JSON.parse(attempt.responses), result: JSON.parse(attempt.result) } : null,
+    test,
+    attempt: attempt
+      ? { ...attempt, responses: JSON.parse(attempt.responses), result: JSON.parse(attempt.result), recording: row.kind === "speaking" && !!recordingFile(attempt.id) }
+      : null,
   });
 });
+
+app.delete("/api/tests/:id", (c) => {
+  if (!tests.get(c.req.param("id"))) return c.json({ error: "Test not found." }, 404);
+  deleteTest(c.req.param("id"));
+  return c.json({ ok: true });
+});
+
+// ---- Speaking recordings ----
+
+app.put("/api/attempts/:id/recording", async (c) => {
+  const id = c.req.param("id");
+  if (!attempts.get(id)) return c.json({ error: "Attempt not found." }, 404);
+  const ext = recordingExt(c.req.header("content-type") ?? "");
+  if (!ext) return c.json({ error: "Unsupported audio type." }, 415);
+  const audio = Buffer.from(await c.req.arrayBuffer());
+  if (!audio.length) return c.json({ error: "The recording is empty." }, 400);
+  saveRecording(id, ext, audio);
+  return c.json({ ok: true });
+});
+
+app.get("/api/attempts/:id/recording", (c) => {
+  const file = recordingFile(c.req.param("id"));
+  if (!file) return c.json({ error: "No recording for this attempt." }, 404);
+  const audio = readFileSync(file.path);
+  const range = /bytes=(\d*)-(\d*)/.exec(c.req.header("range") ?? "");
+  // Browsers seek audio with range requests.
+  if (range) {
+    const start = range[1] ? Number(range[1]) : 0;
+    const end = range[2] ? Math.min(Number(range[2]), audio.length - 1) : audio.length - 1;
+    return c.body(audio.subarray(start, end + 1), 206, {
+      "content-type": file.type,
+      "content-range": `bytes ${start}-${end}/${audio.length}`,
+      "accept-ranges": "bytes",
+    });
+  }
+  return c.body(audio, 200, { "content-type": file.type, "accept-ranges": "bytes" });
+});
+
+// ---- Speaking: live examiner sessions and marking ----
+
+app.post("/api/tests/:id/speaking", async (c) => {
+  const row = tests.get(c.req.param("id"));
+  if (!row || row.kind !== "speaking") return c.json({ error: "Speaking test not found." }, 404);
+  const { sdp } = await c.req.json<{ sdp: string }>();
+  try {
+    const test = speakingTestSchema.parse(JSON.parse(row.spec));
+    const session = await speaking.start(row.id, test, sdp);
+    // The cue card is shown in the room when Part 2 begins.
+    const card = test.part2 ? { task: test.part2.task, prompts: test.part2.prompts, explain: test.part2.explain } : null;
+    return c.json({ ...session, card });
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 502);
+  }
+});
+
+app.get("/api/speaking/:session/events", (c) =>
+  streamSSE(c, async (stream) => {
+    let finish = () => {};
+    const closed = new Promise<void>((resolve) => (finish = resolve));
+    const stop = speaking.subscribe(c.req.param("session"), (e) => {
+      stream.writeSSE({ data: JSON.stringify(e) }).catch(() => {});
+      if (e.type === "closed") finish();
+    });
+    if (!stop) return;
+    stream.onAbort(finish);
+    await closed;
+    stop();
+  }),
+);
+
+app.delete("/api/speaking/:session", async (c) => {
+  await speaking.stop(c.req.param("session"));
+  return c.json({ ok: true });
+});
+
+const speakingSubmission = z.object({
+  transcript: z.array(transcriptLineSchema),
+  metrics: speakingMetricsSchema,
+  /** What the examiner said in its private assessment after the test. */
+  examinerSaid: z.string().nullable().optional(),
+  elapsedSec: z.number().nullable().optional(),
+});
+
+/** Speaking is marked by Codex, which takes a minute: save now, mark in the background. */
+async function submitSpeaking(row: NonNullable<ReturnType<typeof tests.get>>, body: unknown) {
+  const { transcript, metrics, elapsedSec, examinerSaid } = speakingSubmission.parse(body);
+  const id = randomUUID();
+  attempts.insert({ id, test_id: row.id, responses: JSON.stringify({ transcript, metrics, examinerSaid: examinerSaid ?? null }), result: JSON.stringify({ kind: "speaking", marking: 1, transcript }), elapsed_sec: elapsedSec ?? null });
+  library.clearProgress(row.id);
+  (async () => {
+    let result: unknown;
+    try {
+      result = await assessSpeaking(codex, transcript, examinerSaid ?? null);
+    } catch (err) {
+      console.error("speaking marking failed", (err as Error).message);
+      result = { kind: "speaking", band: null, assessment: null, transcript, candidateWords: 0, examinerSaid: examinerSaid ?? null, unmarked: "Marking failed. Please take the test again." };
+    }
+    attempts.setResult(id, result);
+    appEvents.add(row.conversation_id, "score", { testId: row.id });
+    hub.notify(row.conversation_id, { type: "card", card: { kind: "score", testId: row.id } });
+    const r = result as { band: number | null; unmarked: string | null };
+    await hub
+      .injectContext(
+        row.conversation_id,
+        `The learner took the Speaking test "${row.title}" (test ${row.id}). ` +
+          (r.band != null ? `Estimated band ${r.band}. ` : `Not marked: ${r.unmarked} `) +
+          "A score card is already shown. Use get_test_result to see the transcript and the examiner-style feedback before discussing it.",
+      )
+      .catch((err) => console.error("inject failed", err.message));
+  })();
+  return { id };
+}
 
 app.post("/api/tests/:id/attempts", async (c) => {
   const row = tests.get(c.req.param("id"));
   if (!row) return c.json({ error: "Test not found." }, 404);
+  if (row.kind === "speaking") {
+    try {
+      return c.json(await submitSpeaking(row, await c.req.json()));
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  }
   const { responses, elapsedSec } = await c.req.json<{ responses: Record<string, string>; elapsedSec?: number }>();
   const spec = readingTestSchema.parse(JSON.parse(row.spec));
   const result = markReading(spec, Object.fromEntries(Object.entries(responses).map(([q, a]) => [Number(q), a])));
@@ -97,11 +273,17 @@ app.get("/api/tests", (c) =>
   c.json(
     library.list().map(({ answered, spec, ...r }) => {
       const answeredCount = answered ? Object.values(JSON.parse(answered) as Record<string, string>).filter((v) => v?.trim()).length : 0;
+      const status = r.submitted_at !== null ? (r.marking ? "marking" : "scored") : answeredCount > 0 ? "in_progress" : "not_started";
+      if (r.kind === "speaking") {
+        // Only the outline: Speaking questions stay hidden until the test is taken.
+        const parts = speakingParts(speakingTestSchema.parse(JSON.parse(spec)));
+        return { ...r, answeredCount, status, parts: parts.map((p) => SPEAKING_PART_NAMES[p]), families: [] };
+      }
       const t = JSON.parse(spec) as { passages: { title: string; blocks: { family: string }[] }[] };
       return {
         ...r,
         answeredCount,
-        status: r.raw !== null ? "scored" : answeredCount > 0 ? "in_progress" : "not_started",
+        status,
         parts: t.passages.map((p) => p.title),
         families: [...new Set(t.passages.flatMap((p) => p.blocks.map((b) => b.family)))],
       };
@@ -109,25 +291,20 @@ app.get("/api/tests", (c) =>
   ),
 );
 
-app.get("/api/tests/:id/progress", (c) => c.json(library.getProgress(c.req.param("id"))));
-app.put("/api/tests/:id/progress", async (c) => {
-  const { responses, elapsedSec } = await c.req.json<{ responses: Record<string, string>; elapsedSec: number }>();
-  library.saveProgress(c.req.param("id"), responses, elapsedSec);
-  return c.json({ ok: true });
-});
-
 // Analytics for the Progress page: every attempt, plus accuracy by question family.
 app.get("/api/progress", (c) => {
   const rows = library.allAttempts();
   const families: Record<string, { correct: number; total: number; skill: string }> = {};
-  const history = rows.map((r) => {
+  const history = rows.flatMap((r) => {
     const result = JSON.parse(r.result);
-    for (const i of result.items) {
+    // Speaking still being marked, or too short to mark, has no score yet.
+    if (result.kind === "speaking" && result.band == null) return [];
+    for (const i of result.items ?? []) {
       const f = (families[i.key.family] ??= { correct: 0, total: 0, skill: r.kind });
       f.total += 1;
       if (i.correct) f.correct += 1;
     }
-    return { testId: r.test_id, title: r.title, skill: r.kind, mode: r.mode, raw: result.raw, total: result.total, band: result.band, submittedAt: r.submitted_at };
+    return [{ testId: r.test_id, title: r.title, skill: r.kind, mode: r.mode, raw: result.raw ?? null, total: result.total ?? null, band: result.band, submittedAt: r.submitted_at }];
   });
   return c.json({ history, families });
 });
@@ -155,8 +332,24 @@ function attach(ws: WebSocket, conversationId: string) {
   ws.on("message", async (raw) => {
     try {
       const msg = JSON.parse(String(raw));
-      if (msg.type === "send") await hub.send(conversationId, msg.text, { effort: msg.effort });
+      const turn = { effort: msg.effort, model: msg.model, fast: msg.fast };
+      if (msg.type === "send") await hub.send(conversationId, msg.text, turn);
       else if (msg.type === "answer") hub.answer(msg.askId, msg.answer);
+      else if (msg.type === "lateAnswer") {
+        // Answers to a form nobody is waiting on any more (e.g. after a restart): remember them so the
+        // form shows them, and pass them to the tutor as the next message.
+        appEvents.add(conversationId, "ask_answer", { itemId: msg.itemId, answers: msg.answers, text: msg.text });
+        await hub.send(conversationId, msg.text, turn);
+      }
+      else if (msg.type === "confirmDelete") {
+        const done = answerDeleteRequest(conversationId, String(msg.requestId), msg.confirmed === true);
+        if (!done) return;
+        hub.notify(conversationId, { type: "delete_answer", requestId: done.request.requestId, outcome: done.outcome });
+        const titles = done.request.tests.map((t) => `"${t.title}"`).join(", ");
+        await hub
+          .injectContext(conversationId, done.outcome === "deleted" ? `The learner confirmed in the panel; these tests are now deleted: ${titles}.` : `The learner chose to keep ${titles}; nothing was deleted.`)
+          .catch((err) => console.error("inject failed", err.message));
+      }
       else if (msg.type === "interrupt") await hub.interrupt(conversationId);
     } catch (err) {
       send({ type: "error", message: (err as Error).message });

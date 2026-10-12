@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { blockQuestions, type MarkedItem } from "@ielts/spec";
-import { loadProgress, saveProgress, submitAttempt, useTest } from "../data.ts";
+import { submitAttempt, useTest, type ReadingPayload } from "../data.ts";
+import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
+import { SpeakingScreen } from "./SpeakingScreen.tsx";
 import { askTutor, exitTest, go } from "../router.ts";
 import { findEvidence, PassageView, type Highlight } from "./Passage.tsx";
 import { QuestionsView } from "./Questions.tsx";
@@ -8,8 +10,16 @@ import { Results } from "./Results.tsx";
 
 const minutesFor = (mode: string, questions: number) => (mode === "full" ? 60 : Math.max(10, Math.round(questions * 1.5)));
 
-export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart }: { id: string; review: boolean; q: number | null; part: number | null }) {
-  const { data, error } = useTest(id);
+type TestRoute = { id: string; review: boolean; q: number | null; part: number | null };
+
+/** Full-screen test view: Speaking has its own room; Reading uses the computer-IELTS layout. */
+export function TestScreen(props: TestRoute) {
+  const { data, error } = useTest(props.id);
+  if (data?.kind === "speaking") return <SpeakingScreen data={data} />;
+  return <ReadingScreen {...props} data={data as ReadingPayload | undefined} error={error} />;
+}
+
+function ReadingScreen({ id, review: reviewRoute, q: startQ, part: startPart, data, error }: TestRoute & { data: ReadingPayload | undefined; error: string | null }) {
   const test = data?.test;
   const attempt = data?.attempt ?? null;
   const reviewing = !!attempt && reviewRoute;
@@ -24,6 +34,7 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   const [elapsed, setElapsed] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [evidenceQ, setEvidenceQ] = useState<number | null>(null);
@@ -32,19 +43,18 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   useEffect(() => {
     if (!test || loaded) return;
     (async () => {
+      // An untaken test always starts fresh: nothing from an earlier, abandoned sitting is kept.
       if (attempt) {
         setResponses(attempt.responses);
         setElapsed(attempt.elapsed_sec ?? 0);
+        try {
+          setHighlights(JSON.parse(localStorage.getItem(`hl:${id}`) ?? "{}"));
+        } catch {}
       } else {
-        const saved = await loadProgress(id).catch(() => null);
-        if (saved) {
-          setResponses(saved.responses);
-          setElapsed(saved.elapsedSec);
-        }
+        try {
+          localStorage.removeItem(`hl:${id}`);
+        } catch {}
       }
-      try {
-        setHighlights(JSON.parse(localStorage.getItem(`hl:${id}`) ?? "{}"));
-      } catch {}
       const p = startPart ? startPart - 1 : startQ ? parts.findIndex((qs) => qs.includes(startQ)) : 0;
       setPart(Math.max(0, p));
       setCurrent(startQ ?? parts[Math.max(0, p)]?.[0] ?? null);
@@ -56,8 +66,7 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   const limitSec = test ? minutesFor(test.mode, allQs.length) * 60 : 0;
   const remaining = Math.max(0, limitSec - elapsed);
 
-  // Clock and autosave while the test is being taken.
-  const dirty = useRef(false);
+  // The clock while the test is being taken. Answers are not saved until submission: leaving resets the test.
   useEffect(() => {
     if (!loaded || attempt) return;
     const tick = setInterval(() => setElapsed((e) => e + 1), 1000);
@@ -65,18 +74,7 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   }, [loaded, attempt]);
   const latest = useRef({ responses, elapsed });
   latest.current = { responses, elapsed };
-  useEffect(() => {
-    if (!loaded || attempt) return;
-    const save = setInterval(() => {
-      if (!dirty.current) return;
-      dirty.current = false;
-      saveProgress(id, latest.current.responses, latest.current.elapsed).catch(() => (dirty.current = true));
-    }, 2000);
-    return () => clearInterval(save);
-  }, [loaded, attempt, id]);
-
   const onAnswer = useCallback((q: number, value: string) => {
-    dirty.current = true;
     setResponses((r) => ({ ...r, [q]: value }));
   }, []);
 
@@ -125,13 +123,16 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
   const evidenceItem = evidenceQ && review ? review.get(evidenceQ) : null;
   const evidence = evidenceItem ? evidenceItem.key.evidence.map((e) => findEvidence(passage.paragraphs, e)).find(Boolean) ?? null : null;
   const unanswered = allQs.filter((q) => !(responses[q] ?? "").trim()).length;
-  const exit = () => exitTest(data!.conversationId ? { name: "chat", id: data!.conversationId } : { name: "tests" });
+  const leave = () => exitTest(data!.conversationId ? { name: "chat", id: data!.conversationId } : { name: "tests" });
+  const answeredAny = allQs.length > unanswered || Object.values(highlights).some((h) => h.length);
+  // Leaving an untaken test throws the sitting away, so ask first if there is anything to lose.
+  const exit = () => (reviewing || !answeredAny ? leave() : setLeaving(true));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-paper">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-rule bg-surface px-4">
         <button onClick={exit} className="rounded-md px-2 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink">
-          {reviewing ? "Back" : "Save and exit"}
+          {reviewing ? "Back" : "Exit"}
         </button>
         <p className="min-w-0 flex-1 truncate text-center font-serif text-[16px] font-semibold text-ink">{test.title}</p>
         {reviewing ? (
@@ -187,6 +188,11 @@ export function TestScreen({ id, review: reviewRoute, q: startQ, part: startPart
 
       <Navigator parts={parts} part={part} current={current} responses={responses} flagged={flagged} review={review} onPart={(p) => jump(parts[p]![0]!)} onJump={jump} />
 
+      {leaving && (
+        <ConfirmDialog title="Leave the test?" action="Leave" onCancel={() => setLeaving(false)} onConfirm={leave}>
+          Your answers will be cleared, and the test starts from the beginning next time.
+        </ConfirmDialog>
+      )}
       {confirming && (
         <Dialog onClose={() => setConfirming(false)}>
           <h2 className="font-serif text-xl font-semibold text-ink">Submit your answers?</h2>

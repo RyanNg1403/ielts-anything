@@ -137,3 +137,11 @@ describe("marking", () => {
     expect(answerKey(test)).toHaveLength(6);
   });
 });
+
+describe("stripParagraphLabels", () => {
+  it("removes a typed letter that matches the paragraph's position, and nothing else", async () => {
+    const { stripParagraphLabels } = await import("./reading.ts");
+    const p = { title: "t", paragraphs: ["A. By early October.", "(B) Then.", "A study found.", "D: Finally."] } as any;
+    expect(stripParagraphLabels(p).paragraphs).toEqual(["By early October.", "Then.", "A study found.", "Finally."]);
+  });
+});

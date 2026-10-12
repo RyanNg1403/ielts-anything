@@ -3,6 +3,7 @@
 import { candidateText, markReading, type ReadingTest } from "@ielts/spec";
 import type { CodexAppServer } from "./app-server.ts";
 import { WORKSPACE } from "./home.ts";
+import { DEFAULT_EFFORT, DEFAULT_MODEL } from "./defaults.ts";
 
 const SOLVER_INSTRUCTIONS = `You are an expert IELTS candidate sitting an Academic Reading paper. Answer every question using only the passage text, following each instruction exactly (word limits, letters, TRUE/FALSE/NOT GIVEN or YES/NO/NOT GIVEN labels). Do not use outside knowledge. Do not run commands.`;
 
@@ -58,7 +59,8 @@ export async function solveReading(codex: CodexAppServer, test: ReadingTest, opt
     threadId: thread.id,
     input: [{ type: "text", text: `${candidateText(test)}\n\nAnswer all ${questions.length} questions.`, text_elements: [] }],
     outputSchema,
-    effort: opts.effort ?? "medium",
+    model: DEFAULT_MODEL,
+    effort: opts.effort ?? DEFAULT_EFFORT,
   });
 
   const raw = await done;

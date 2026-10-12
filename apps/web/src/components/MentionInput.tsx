@@ -122,7 +122,7 @@ export const MentionInput = forwardRef<MentionInputHandle, Props>(function Menti
                 <span className="size-1.5 shrink-0 rounded-full" style={{ background: `var(--color-${t.kind})` }} />
                 <span className="min-w-0 flex-1 truncate text-ink">{t.title}</span>
                 <span className="shrink-0 text-[12px] text-ink-soft">
-                  {t.status === "scored" ? (t.band != null ? t.band.toFixed(1) : `${t.raw}/${t.total}`) : t.status === "in_progress" ? "In progress" : "Not taken"}
+                  {t.status === "scored" ? (t.band != null ? t.band.toFixed(1) : t.total ? `${t.raw}/${t.total}` : "–") : t.status === "in_progress" ? "In progress" : t.status === "marking" ? "Marking…" : "Not taken"}
                 </span>
               </button>
             ))

@@ -2,15 +2,32 @@ import { useEffect, useMemo, useRef } from "react";
 import { useConversation } from "../api.ts";
 import { AskCard } from "./cards/AskCard.tsx";
 import { BriefCard } from "./cards/BriefCard.tsx";
+import { ConfirmDeleteCard } from "./cards/ConfirmDeleteCard.tsx";
 import { ChatActions, ExplainCard, ScoreCard, TestCard } from "./cards/TestCards.tsx";
 import { ReplyBox } from "./Composer.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { WorkLog } from "./WorkLog.tsx";
 import { MentionText } from "./MentionInput.tsx";
+import { useVoice } from "../voice.ts";
 
 export function Chat({ conversationId, initial }: { conversationId: string; initial: { current: string | null } }) {
-  const { entries, busy, activity, send, answer, interrupt, markAnswered } = useConversation(conversationId, initial);
+  const { entries, busy, activity, caption, voiceEnded, send, answer, confirmDelete, interrupt, answerLate } = useConversation(conversationId, initial);
+  const voice = useVoice(conversationId);
   const end = useRef<HTMLDivElement>(null);
+
+  // The mic on the home screen opens a new chat and starts talking straight away.
+  useEffect(() => {
+    const key = `voice:${conversationId}`;
+    if (sessionStorage.getItem(key)) {
+      sessionStorage.removeItem(key);
+      voice.start();
+    }
+  }, [conversationId, voice.start]);
+
+  // Codex closed the voice session (timeout, error): hang up here too.
+  useEffect(() => {
+    if (voiceEnded) voice.stop();
+  }, [voiceEnded, voice.stop]);
 
   // "Ask the tutor" buttons elsewhere leave a message to send when this chat opens.
   useEffect(() => {
@@ -54,10 +71,14 @@ export function Chat({ conversationId, initial }: { conversationId: string; init
                       key={e.id}
                       questions={e.questions}
                       answers={e.answers}
-                      // If nobody is waiting on this card any more (e.g. the app restarted), send the
-                      // choices as a normal message so the card never goes dead.
-                      onSubmit={e.askId ? (a) => answer(e.askId!, a) : (a) => (markAnswered(e.id, a), send(answersAsText(e.questions, a)))}
+                      // If nobody is waiting on this card any more (e.g. the app restarted), the
+                      // answers still land in the card and reach the tutor as the next message.
+                      onSubmit={e.askId ? (a) => answer(e.askId!, a) : (a) => answerLate(e.id, a, answersAsText(e.questions, a))}
                     />
+                  );
+                case "confirm":
+                  return (
+                    <ConfirmDeleteCard key={e.id} tests={e.tests} outcome={e.outcome} onAnswer={(yes) => confirmDelete(e.requestId, yes)} />
                   );
                 case "card":
                   switch (e.card.kind) {
@@ -95,7 +116,7 @@ export function Chat({ conversationId, initial }: { conversationId: string; init
         </div>
         <div className="relative mx-auto w-full max-w-[740px] px-4 pb-5 sm:px-6">
           <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t from-paper to-transparent" />
-          <ReplyBox onSend={(t) => send(t)} onStop={interrupt} busy={busy} />
+          <ReplyBox onSend={(t) => send(t)} onStop={interrupt} busy={busy} voice={voice} caption={caption} />
         </div>
       </div>
     </ChatActions.Provider>

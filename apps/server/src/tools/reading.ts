@@ -8,17 +8,24 @@ import {
   passageSchema,
   readingTestSchema,
   validatePassage,
+  stripParagraphLabels,
   validateTest,
   type Passage,
   type ReadingTest,
 } from "@ielts/spec";
 import type { CodexAppServer } from "../codex/app-server.ts";
 import { solveReading } from "../codex/solver.ts";
-import { conversations, tests } from "../db.ts";
+import { attempts, conversations, tests } from "../db.ts";
 import { defineTool } from "./registry.ts";
 
-type Draft = { mode: "full" | "drill"; title: string; topic: string; passages: Passage[]; solverRuns: number };
+/** `replaces` is set while the tutor is changing an existing, untaken test (see edit_test). */
+type Draft = { mode: "full" | "drill"; title: string; topic: string; passages: Passage[]; solverRuns: number; replaces?: string };
 const drafts = new Map<string, Draft>();
+
+/** Start changing a published Reading test: its passages become the draft, and finalizing replaces it in place. */
+export function startReadingEdit(conversationId: string, testId: string, test: ReadingTest) {
+  drafts.set(conversationId, { mode: test.mode, title: test.title, topic: test.topic, passages: test.passages, solverRuns: 0, replaces: testId });
+}
 const MAX_SOLVER_RUNS = 3;
 
 export function readingTools(codex: CodexAppServer) {
@@ -34,16 +41,19 @@ export function readingTools(codex: CodexAppServer) {
       topic: z.string().describe("The learner's topic in one sentence."),
       passageNumber: z.number().int().min(1).max(3),
       passage: passageSchema,
+      replaceTestId: z.string().optional().describe("Only when changing an existing test after edit_test: that test's id. Resubmit just the passages you change."),
     }),
-    async run({ mode, title, topic, passageNumber, passage }, ctx) {
+    async run({ mode, title, topic, passageNumber, passage, replaceTestId }, ctx) {
       let draft = drafts.get(ctx.conversationId);
-      if (!draft || passageNumber === 1) draft = { mode, title, topic, passages: [], solverRuns: 0 };
+      if (replaceTestId && draft?.replaces !== replaceTestId) return { success: false, text: `Call edit_test for ${replaceTestId} first.` };
+      if (!draft || (passageNumber === 1 && !replaceTestId)) draft = { mode, title, topic, passages: [], solverRuns: 0 };
       if (passageNumber > draft.passages.length + 1)
         return { success: false, text: `Submit passage ${draft.passages.length + 1} first.` };
 
       const prev = draft.passages[passageNumber - 2];
       const expectedFirst = prev ? Math.max(...prev.blocks.flatMap(blockQuestions)) + 1 : 1;
       const first = Math.min(...passage.blocks.flatMap(blockQuestions));
+      passage = stripParagraphLabels(passage);
       const issues = validatePassage(passage, passageNumber);
       if (first !== expectedFirst)
         issues.unshift({ level: "error", where: `Passage ${passageNumber}`, message: `questions must start at ${expectedFirst} (found ${first}).` });
@@ -103,8 +113,18 @@ export function readingTools(codex: CodexAppServer) {
         };
       }
 
-      const id = randomUUID();
       const review = { solver: report, confirmedKeys, unresolved: open.map((d) => d.q), warnings: issues };
+      const flagged = open.length ? ` Note: ${open.length} item(s) stayed disputed after ${MAX_SOLVER_RUNS} solver runs and are flagged for review.` : "";
+      if (draft.replaces) {
+        const id = draft.replaces;
+        if (!tests.get(id)) return { success: false, text: "The test being changed no longer exists. Publish it as a new test: resubmit passage 1 without replaceTestId." };
+        if (attempts.latest(id)) return { success: false, text: "The learner has taken this test since you started changing it, so it can no longer be changed. Publish a new test instead." };
+        tests.update(id, { mode: test.mode, title: test.title, spec: JSON.stringify(test), review: JSON.stringify(review) });
+        drafts.delete(ctx.conversationId);
+        ctx.emit({ type: "card", card: { kind: "test", testId: id } });
+        return { text: `Updated (test ${id}). The learner's card now opens the changed test. Tell them in one sentence what changed.${flagged}` };
+      }
+      const id = randomUUID();
       tests.insert({ id, conversation_id: ctx.conversationId, kind: "reading", mode: test.mode, title: test.title, spec: JSON.stringify(test), review: JSON.stringify(review) });
       drafts.delete(ctx.conversationId);
       // The chat is named after its first test rather than the learner's first message.
@@ -116,8 +136,8 @@ export function readingTools(codex: CodexAppServer) {
       ctx.emit({ type: "card", card: { kind: "test", testId: id } });
       return {
         text:
-          `Published (test ${id}). The learner sees a "Start test" card. Tell them in one or two sentences that it is ready.` +
-          (open.length ? ` Note: ${open.length} item(s) stayed disputed after ${MAX_SOLVER_RUNS} solver runs and are flagged for review.` : ""),
+          `Published (test ${id}). The learner sees the test card; clicking it opens the test. Tell them in one or two sentences that it is ready.` +
+          flagged,
       };
     },
   });
