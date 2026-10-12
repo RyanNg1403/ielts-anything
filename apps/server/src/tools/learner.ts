@@ -18,13 +18,14 @@ const question = z.object({
 export const askLearner = defineTool({
   name: "ask_learner",
   description:
-    "Ask the learner 1-4 clarifying questions as interactive cards in the app and wait for their answers. " +
+    "Ask the learner 1-4 clarifying questions as an interactive form in the app. " +
     "Use this instead of asking in plain text whenever the answer is a choice (target band, skill, full test vs drill, " +
-    "question types, difficulty, topic angle). Returns the answers as JSON keyed by question id.",
+    "question types, difficulty, topic angle). The form is shown at once; the learner's answers arrive as their next message.",
   input: z.object({ questions: z.array(question).min(1).max(4) }),
-  async run({ questions }, ctx) {
-    const answers = await ctx.ask({ kind: "questions", questions });
-    return { text: JSON.stringify({ answers }) };
+  // Returns at once rather than waiting: Codex may cancel a tool call that waits on a person, which
+  // left forms that could no longer be answered. The answers come back as the learner's next message.
+  async run() {
+    return { text: "The form is shown to the learner. Do not repeat the questions in chat. End your turn now; their answers will arrive as their next message." };
   },
 });
 

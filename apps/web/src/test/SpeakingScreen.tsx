@@ -3,6 +3,7 @@
 // fixed sentences tell the room when a part starts. Afterwards the transcript is marked.
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  examinerSelfAnswers,
   heardSignal,
   SPEAKING_PART_MINUTES,
   type CueCard,
@@ -13,6 +14,7 @@ import {
 } from "@ielts/spec";
 import { invalidate, isMarking, useTest, type SpeakingPayload } from "../data.ts";
 import { exitTest } from "../router.ts";
+import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
 import { partsLabel, speakingOutline } from "../components/cards/SpeakingCards.tsx";
 import { SpeakingResults } from "./SpeakingResults.tsx";
 
@@ -59,6 +61,7 @@ function Marking({ data, live, onLeave }: { data: SpeakingPayload; live?: boolea
 function Room({ data }: { data: SpeakingPayload }) {
   const { parts, minutes } = speakingOutline(data.test);
   const [stage, setStage] = useState<Stage>("check");
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [part, setPart] = useState<SpeakingPartNumber>(parts[0]!);
   const [card, setCard] = useState<CueCard | null>(null);
   const [caption, setCaption] = useState("");
@@ -100,9 +103,13 @@ function Room({ data }: { data: SpeakingPayload }) {
     /** When the examiner last said part of its assessment, and how often it was asked to go on. */
     assessedLastAt: 0,
     assessNudges: 0,
+    /** The examiner was asked to check its bands once its assessment was complete. */
+    checkAsked: false,
     examinerAt: 0,
     lastExaminerTurn: "",
     stallNudged: false,
+    /** The examiner was already told off for answering its own question in this turn. */
+    selfAnswerNoted: false,
     micToken: 0,
     /** The learner switched their microphone off for a moment; the test carries on. */
     muted: false,
@@ -264,6 +271,7 @@ function Room({ data }: { data: SpeakingPayload }) {
       if (e.role === "candidate" && (e.type === "delta" || e.type === "done")) {
         turn = "";
         piece = "";
+        r.current.selfAnswerNoted = false;
       }
       // After the test the examiner speaks its assessment privately: keep it out of the caption and transcript.
       if (r.current.assessing) {
@@ -273,7 +281,15 @@ function Room({ data }: { data: SpeakingPayload }) {
         if (e.type === "done" && e.text?.trim()) {
           // The learner's last answer can finish transcribing after the test has closed.
           if (e.role === "candidate") r.current.transcript.push({ role: "candidate", part: r.current.part, text: e.text.trim() });
-          else onAssessment(e.text.trim());
+          else {
+            // The piece with the closing sentence also carries the test speech before it: that is transcript, not assessment.
+            const [test, rest] = splitAtEnd(e.text.trim());
+            if (rest === null) onAssessment(test);
+            else {
+              r.current.transcript.push({ role: "examiner", part: r.current.part, text: test });
+              if (rest) onAssessment(rest);
+            }
+          }
         }
         return;
       }
@@ -287,17 +303,9 @@ function Room({ data }: { data: SpeakingPayload }) {
       } else if (e.type === "done") {
         if (!e.text?.trim()) return;
         const role = e.role as TranscriptLine["role"];
-        let text = e.text.trim();
-        let rest = "";
-        if (role === "examiner") {
-          // The closing sentence and the start of the assessment can arrive as one piece.
-          const at = text.toLowerCase().search(/end of the (speaking )?test\.?/);
-          if (at !== -1) {
-            const cut = text.indexOf(".", at);
-            rest = cut === -1 ? "" : text.slice(cut + 1).trim();
-            text = cut === -1 ? text : text.slice(0, cut + 1);
-          }
-        }
+        // The closing sentence and the start of the assessment can arrive as one piece.
+        const [text, after] = role === "examiner" ? splitAtEnd(e.text.trim()) : [e.text.trim(), null];
+        const rest = after ?? "";
         r.current.transcript.push({ role, part: r.current.part, text });
         if (role === "examiner") {
           turn = join(turn, text);
@@ -307,6 +315,11 @@ function Room({ data }: { data: SpeakingPayload }) {
           r.current.examinerAt = Date.now();
           r.current.lastExaminerTurn = turn;
           r.current.stallNudged = false;
+          // The examiner went on to answer its own question: stop it before the next one.
+          if (!r.current.assessing && !r.current.selfAnswerNoted && examinerSelfAnswers([{ role: "examiner", part: r.current.part, text: turn }]).length) {
+            r.current.selfAnswerNoted = true;
+            note("Do not answer your own questions or speak for the candidate. Ask your next question, then wait in silence for the candidate's answer.");
+          }
           onExaminer(turn);
           if (r.current.assessing && rest) onAssessment(rest);
         } else {
@@ -493,7 +506,7 @@ function Room({ data }: { data: SpeakingPayload }) {
       if (!c.examinerSaid || Date.now() - c.assessedLastAt < 12_000 || c.assessNudges >= 3) return;
       c.assessNudges++;
       c.assessedLastAt = Date.now();
-      note("Continue your assessment exactly where you stopped, in the same format, and finish with \"End of assessment.\"");
+      note(c.checkAsked ? "Say your final bands now, in the exact format, ending with \"End of check.\"" : "Continue your assessment exactly where you stopped, in the same format, and finish with \"End of assessment.\"");
       nudge();
     }, 3_000);
     setTimeout(() => c.assessing && !c.finished && finish(), ASSESS_TIMEOUT);
@@ -503,7 +516,13 @@ function Room({ data }: { data: SpeakingPayload }) {
     const c = r.current;
     c.assessedLastAt = Date.now();
     c.examinerSaid = join(c.examinerSaid, text);
-    if (/end of (the )?assessment/i.test(c.examinerSaid)) setTimeout(() => finish(), 1000);
+    if (/end of check/i.test(c.examinerSaid)) return void setTimeout(() => finish(), 1000);
+    // A second, final look at the bands against the descriptors steadies the marks.
+    if (!c.checkAsked && /end of (the )?assessment/i.test(c.examinerSaid)) {
+      c.checkAsked = true;
+      note("Now check your bands as described, then say the final bands in the exact format, ending with \"End of check.\"");
+      nudge();
+    }
   };
 
   /** "End test": the examiner closes the test and still gives its assessment of what it heard. */
@@ -613,14 +632,23 @@ function Room({ data }: { data: SpeakingPayload }) {
 
   if (stage === "assessing")
     return (
-      <Marking
-        data={data}
-        live
-        onLeave={async () => {
-          await finish();
-          leave();
-        }}
-      />
+      <>
+        <Marking data={data} live onLeave={() => setConfirmLeave(true)} />
+        {confirmLeave && (
+          <ConfirmDialog
+            title="Leave before marking finishes?"
+            action="Leave"
+            onCancel={() => setConfirmLeave(false)}
+            onConfirm={async () => {
+              setConfirmLeave(false);
+              await finish();
+              leave();
+            }}
+          >
+            <p>The examiner is still marking your test. If you leave now, this test will not be marked.</p>
+          </ConfirmDialog>
+        )}
+      </>
     );
   if (stage === "submitting") return <Marking data={data} />;
 
@@ -812,4 +840,12 @@ function meter(ctx: AudioContext, stream: MediaStream) {
     for (const v of buf) sum += ((v - 128) / 128) ** 2;
     return Math.min(1, Math.sqrt(sum / buf.length) * 4);
   };
+}
+
+/** Split an examiner piece after the closing sentence: [up to and including it, the rest], or [text, null] without it. */
+function splitAtEnd(text: string): [string, string | null] {
+  const at = text.toLowerCase().search(/end of the (speaking )?test\.?/);
+  if (at === -1) return [text, null];
+  const cut = text.indexOf(".", at);
+  return cut === -1 ? [text, ""] : [text.slice(0, cut + 1), text.slice(cut + 1).trim()];
 }

@@ -62,25 +62,73 @@ describe("speaking", () => {
   });
 });
 
-describe("examiner's spoken bands", () => {
-  it("reads digits and number words, in any order", async () => {
-    const { parseSpokenBands } = await import("./index.ts");
+describe("examiner's spoken assessment", () => {
+  const bands = (a: { fluency: { band: number }; lexical: { band: number }; grammar: { band: number }; pronunciation: { band: number } } | null) =>
+    a && { fluency: a.fluency.band, lexical: a.lexical.band, grammar: a.grammar.band, pronunciation: a.pronunciation.band };
+
+  it("reads digits and number words", async () => {
+    const { parseSpokenAssessment } = await import("./index.ts");
     const said =
       "Assessment. Fluency and coherence: band seven. You kept going well. Lexical resource, band 6. " +
       "Grammatical range and accuracy: band six. Some errors. Pronunciation: band 7. Clear stress. Next steps: practise linking.";
-    expect(parseSpokenBands(said)).toEqual({ fluency: 7, lexical: 6, grammar: 6, pronunciation: 7 });
+    expect(bands(parseSpokenAssessment(said))).toEqual({ fluency: 7, lexical: 6, grammar: 6, pronunciation: 7 });
   });
-  it("reads the evidence-first format", async () => {
-    const { parseSpokenBands } = await import("./index.ts");
+
+  it("splits the evidence-first format into the examiner's own words", async () => {
+    const { parseSpokenAssessment } = await import("./index.ts");
     const said =
-      "Assessment. Fluency and coherence. Evidence: long turns, linked with \"first of all\". Descriptor: fits band 7, \"able to keep going\"; not band 8, hesitation was to find words. " +
+      "Thank you. That is the end of the speaking test. Assessment. Fluency and coherence. Evidence: long turns, linked with \"first of all\". Descriptor: fits band 7, \"able to keep going\"; not band 8, hesitation was to find words. " +
       "Fluency and coherence band 7. Lexical resource. Evidence: \"regulation framework\". Descriptor: band 8 needs skilful less common items. Lexical resource band seven. " +
-      "Grammatical range and accuracy. Evidence: relative clauses; \"are going to coming\". Descriptor: band 7. Grammatical range and accuracy band 7. " +
-      "Pronunciation. Evidence: like pronunciation band 6 speakers, \"development\" stressed on the first syllable. Descriptor: band 6 plus some band 8. Pronunciation band 8. Next steps: one. End of assessment.";
-    expect(parseSpokenBands(said)).toEqual({ fluency: 7, lexical: 7, grammar: 7, pronunciation: 8 });
+      "Grammatical range and accuracy. Evidence relative clauses; \"are going to coming\". Descriptor: band 7. Grammatical range and accuracy band 7. " +
+      "Pronunciation. Evidence: like pronunciation band 6 speakers, \"development\" stressed on the first syllable. Descriptor: band 6 plus some band 8. Pronunciation band 8. Next steps: plan answers in stages. End of assessment.";
+    const a = parseSpokenAssessment(said)!;
+    expect(bands(a)).toEqual({ fluency: 7, lexical: 7, grammar: 7, pronunciation: 8 });
+    expect(a.fluency).toEqual({
+      band: 7,
+      evidence: "Long turns, linked with \"first of all\".",
+      descriptor: "Fits band 7, \"able to keep going\"; not band 8, hesitation was to find words.",
+    });
+    expect(a.grammar.evidence).toBe("Relative clauses; \"are going to coming\".");
+    expect(a.pronunciation.evidence).toBe("Like pronunciation band 6 speakers, \"development\" stressed on the first syllable.");
+    expect(a.nextSteps).toBe("Plan answers in stages.");
   });
+
+  it("keeps the whole section as evidence when there is no Descriptor label", async () => {
+    const { parseSpokenAssessment } = await import("./index.ts");
+    const said = "Assessment. Fluency and coherence. Long turns. Fluency and coherence band 6. Lexical resource. Plain words. Lexical resource band 6. Grammatical range and accuracy. Slips. Grammatical range and accuracy band 5. Pronunciation. Clear. Pronunciation band 6. End of assessment.";
+    const a = parseSpokenAssessment(said)!;
+    expect(a.lexical).toEqual({ band: 6, evidence: "Plain words.", descriptor: "" });
+    expect(a.nextSteps).toBe("");
+  });
+
   it("returns null when a criterion is missing", async () => {
-    const { parseSpokenBands } = await import("./index.ts");
-    expect(parseSpokenBands("Fluency and coherence: band 7. Lexical resource: band 6. Pronunciation: band 7.")).toBeNull();
+    const { parseSpokenAssessment } = await import("./index.ts");
+    expect(parseSpokenAssessment("Fluency and coherence: band 7. Lexical resource: band 6. Pronunciation: band 7.")).toBeNull();
+  });
+});
+
+describe("examiner answering its own questions", () => {
+  const ex = (text: string) => ({ role: "examiner" as const, part: 3 as const, text });
+  const ca = (text: string) => ({ role: "candidate" as const, part: 3 as const, text });
+  it("passes a normal interview, including the closing sentence and a short follow-up", async () => {
+    const { examinerSelfAnswers } = await import("./index.ts");
+    const lines = [
+      ex("Good morning. My name is Sam. Let's consider first the pace of AI development."),
+      ex("Why are some people concerned about how quickly AI is developing?"),
+      ca("I think it is too fast."),
+      ex("Why do you think that is? Can you give me an example?"),
+      ca("Because new models appear every month."),
+      ex("Thank you. That is the end of the speaking test."),
+    ];
+    expect(examinerSelfAnswers(lines)).toEqual([]);
+  });
+  it("flags a turn that goes on to answer its own question, even across pieces", async () => {
+    const { examinerSelfAnswers } = await import("./index.ts");
+    const lines = [
+      ca("Hello"),
+      ex("What benefits could come from slowing the development of powerful AI?"),
+      ex("Slowing it down could give researchers and governments more time to test systems properly and set clear rules."),
+    ];
+    expect(examinerSelfAnswers(lines)).toHaveLength(1);
   });
 });

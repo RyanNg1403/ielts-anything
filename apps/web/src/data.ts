@@ -116,6 +116,15 @@ export async function deleteTest(id: string) {
   invalidate("/api/conversations");
 }
 
+/** Clear an unmarked Speaking attempt so its test can be taken again. */
+export async function retakeSpeaking(testId: string, attemptId: string) {
+  const res = await fetch(`/api/attempts/${attemptId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Clearing the attempt failed.");
+  invalidate(`/api/tests/${testId}`);
+  invalidate("/api/tests");
+  invalidate("/api/progress");
+}
+
 export async function deleteConversation(id: string) {
   await fetch(`/api/conversations/${id}`, { method: "DELETE" });
   invalidate("/api/conversations");
