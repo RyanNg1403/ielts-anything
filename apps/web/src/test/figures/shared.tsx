@@ -4,7 +4,24 @@ import type { ReactNode } from "react";
 
 export const FONT = 11;
 
-/** Fills for bars and pie slices, in order: solid, light, hatched, white, dotted. */
+/** Fills for bars and pie slices, one per series or slice (up to 8): solid, light, hatched, white,
+ *  dotted, mid grey, cross-hatched, lined. `dark` needs light text; `busy` needs a text halo. */
+const FILLS = [
+  { cls: "fill-ink/80", dark: true },
+  { cls: "fill-ink/30" },
+  { pattern: "hatch", busy: true },
+  { cls: "fill-surface" },
+  { pattern: "dots", busy: true },
+  { cls: "fill-ink/55", dark: true },
+  { pattern: "cross", busy: true },
+  { pattern: "hlines", busy: true },
+] as const;
+
+export function fillFor(id: string, i: number) {
+  const f = FILLS[i % FILLS.length]! as { cls?: string; pattern?: string; dark?: boolean; busy?: boolean };
+  return { fill: f.pattern ? `url(#${id}-${f.pattern})` : undefined, className: `${f.cls ?? ""} stroke-ink`, dark: !!f.dark, busy: !!f.busy };
+}
+
 export function Patterns({ id }: { id: string }) {
   return (
     <defs>
@@ -15,6 +32,14 @@ export function Patterns({ id }: { id: string }) {
       <pattern id={`${id}-dots`} width="5" height="5" patternUnits="userSpaceOnUse">
         <rect width="5" height="5" className="fill-surface" />
         <circle cx="2.5" cy="2.5" r="1" className="fill-ink" />
+      </pattern>
+      <pattern id={`${id}-cross`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="6" height="6" className="fill-surface" />
+        <path d="M0 0V6M0 0H6" className="stroke-ink" strokeWidth="1" />
+      </pattern>
+      <pattern id={`${id}-hlines`} width="5" height="5" patternUnits="userSpaceOnUse">
+        <rect width="5" height="5" className="fill-surface" />
+        <line x1="0" y1="2.5" x2="5" y2="2.5" className="stroke-ink" strokeWidth="1.2" />
       </pattern>
       <pattern id={`${id}-waves`} width="16" height="10" patternUnits="userSpaceOnUse">
         <path d="M2 6 q2 -3 4 0 t4 0" fill="none" className="stroke-ink-faint" strokeWidth="0.8" />
@@ -27,10 +52,8 @@ export function Patterns({ id }: { id: string }) {
 }
 
 export function Swatch({ id, i, ...rest }: { id: string; i: number } & React.SVGProps<SVGRectElement>) {
-  const k = i % 5;
-  const fill = k === 2 ? `url(#${id}-hatch)` : k === 4 ? `url(#${id}-dots)` : undefined;
-  const cls = k === 0 ? "fill-ink/80" : k === 1 ? "fill-ink/30" : k === 3 ? "fill-surface" : "";
-  return <rect {...rest} fill={fill} className={`${cls} stroke-ink`} strokeWidth="0.8" />;
+  const { fill, className } = fillFor(id, i);
+  return <rect {...rest} fill={fill} className={className} strokeWidth="0.8" />;
 }
 
 export const DASHES = ["", "6 4", "1.5 3", "8 3 2 3", "3 2"];

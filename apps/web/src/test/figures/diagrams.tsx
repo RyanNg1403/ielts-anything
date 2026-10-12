@@ -3,11 +3,13 @@ import { useId } from "react";
 import { MAP_GRID, rect, type MapFeature, type MapFigure, type ProcessFigure } from "@ielts/spec";
 import { FONT, FigureTitle, Lines, Patterns, wrap } from "./shared.tsx";
 
-const COLS = 4;
-const NODE_W = 118;
+const NODE_W = 112;
 const NODE_H = 58;
-const GAP_X = 50;
+const GAP_X = 66;
 const GAP_Y = 44;
+/** Room outside the stages for arrows that go round the diagram (a cycle closing, a long jump). */
+const MARGIN = 30;
+const TOP = GAP_Y / 2 + 4;
 
 /** Stages flow left to right, then snake back on the next row, as on the Cambridge pages.
  *  Stages that happen side by side (parallel routes) share a column. */
@@ -20,6 +22,8 @@ function layoutProcess(f: ProcessFigure) {
     rank.set(s.id, Math.max(0, ...before));
   }
   const ranks = Math.max(...rank.values()) + 1;
+  // Up to 4 per row, with rows as even as possible: 9 stages make 3 rows of 3, not 4 + 4 + 1.
+  const COLS = Math.ceil(ranks / Math.ceil(ranks / 4));
   const stacks = Array.from({ length: ranks }, (_, r) => f.stages.filter((s) => rank.get(s.id) === r));
   const bands = Math.ceil(ranks / COLS);
   const bandH = Array.from({ length: bands }, (_, b) => Math.max(...stacks.slice(b * COLS, b * COLS + COLS).map((s) => s.length)) * (NODE_H + 14) - 14);
@@ -29,16 +33,16 @@ function layoutProcess(f: ProcessFigure) {
     const band = Math.floor(r / COLS);
     const col = band % 2 === 0 ? r % COLS : COLS - 1 - (r % COLS);
     const top = bandY[band]! + (bandH[band]! - (stack.length * (NODE_H + 14) - 14)) / 2;
-    stack.forEach((s, k) => pos.set(s.id, { x: 20 + col * (NODE_W + GAP_X), y: 8 + top + k * (NODE_H + 14), band, col }));
+    stack.forEach((s, k) => pos.set(s.id, { x: MARGIN + col * (NODE_W + GAP_X), y: TOP + top + k * (NODE_H + 14), band, col }));
   });
-  const height = 16 + bandY[bands - 1]! + bandH[bands - 1]!;
-  return { pos, height };
+  const height = TOP + bandY[bands - 1]! + bandH[bands - 1]! + GAP_Y / 2 + 4;
+  return { pos, height, cols: COLS };
 }
 
 export function ProcessDiagram({ f }: { f: ProcessFigure }) {
   const id = useId().replace(/:/g, "");
-  const { pos, height } = layoutProcess(f);
-  const W = 20 * 2 + COLS * NODE_W + (COLS - 1) * GAP_X;
+  const { pos, height, cols } = layoutProcess(f);
+  const W = MARGIN * 2 + cols * NODE_W + (cols - 1) * GAP_X;
   const number = new Map(f.stages.map((s, i) => [s.id, i + 1]));
   return (
     <figure className="overflow-x-auto">
@@ -56,30 +60,43 @@ export function ProcessDiagram({ f }: { f: ProcessFigure }) {
           const [scx, scy, tcx, tcy] = [s.x + NODE_W / 2, s.y + NODE_H / 2, t.x + NODE_W / 2, t.y + NODE_H / 2];
           let d: string;
           let mid: [number, number];
-          if (s.band === t.band) {
+          if (s.band === t.band && Math.abs(s.col - t.col) === 1) {
             const dir = tcx > scx ? 1 : -1;
             const [x1, x2] = [scx + (dir * NODE_W) / 2 + dir * 3, tcx - (dir * NODE_W) / 2 - dir * 5];
             d = `M${x1} ${scy}L${x2} ${tcy}`;
             mid = [(x1 + x2) / 2, (scy + tcy) / 2];
-          } else if (s.col === t.col) {
+          } else if (s.col === t.col && Math.abs(s.band - t.band) === 1) {
             const dir = tcy > scy ? 1 : -1;
             const [y1, y2] = [scy + (dir * NODE_H) / 2 + dir * 3, tcy - (dir * NODE_H) / 2 - dir * 5];
             d = `M${scx} ${y1}L${tcx} ${y2}`;
             mid = [scx, (y1 + y2) / 2];
-          } else {
-            // Leave from below or above, run along the gap between rows, then enter the target.
+          } else if (t.band === s.band + 1) {
+            // Down one row to another column: along the gap between the rows, then into the target.
             const down = tcy > scy;
             const y1 = scy + ((down ? 1 : -1) * NODE_H) / 2 + (down ? 3 : -3);
             const gy = down ? y1 + GAP_Y / 2 - 3 : y1 - GAP_Y / 2 + 3;
             const y2 = tcy - ((down ? 1 : -1) * NODE_H) / 2 - (down ? 5 : -5);
             d = `M${scx} ${y1}L${scx} ${gy}L${tcx} ${gy}L${tcx} ${y2}`;
             mid = [(scx + tcx) / 2, gy];
+          } else {
+            // Anything else (a cycle closing, a jump back or over a stage) goes round the outside,
+            // so it never passes through another stage: out below the source, along the nearer
+            // side, then into the top of the target.
+            const left = s.col + t.col <= cols - 1;
+            const xm = left ? MARGIN / 2 : W - MARGIN / 2;
+            const [y1, gyS, gyT, y2] = [s.y + NODE_H + 3, s.y + NODE_H + GAP_Y / 2, t.y - GAP_Y / 2, t.y - 5];
+            d = `M${scx} ${y1}L${scx} ${gyS}L${xm} ${gyS}L${xm} ${gyT}L${tcx} ${gyT}L${tcx} ${y2}`;
+            mid = [xm, (gyS + gyT) / 2];
           }
           return (
             <g key={i}>
               <path d={d} fill="none" className="stroke-ink" strokeWidth="1.6" markerEnd={`url(#${id}-head)`} />
               {a.label && (
-                <Lines x={mid[0]} y={mid[1] - 10} lines={wrap(a.label, 10)} size={FONT - 1} fontStyle="italic" halo />
+                (() => {
+                  // Sit the label wholly above the arrow, however many lines it wraps to.
+                  const lines = wrap(a.label, 12);
+                  return <Lines x={mid[0]} y={mid[1] - 9 - ((lines.length - 1) * (FONT - 1) * 1.2) / 2} lines={lines} size={FONT - 1} fontStyle="italic" halo />;
+                })()
               )}
             </g>
           );

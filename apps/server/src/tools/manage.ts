@@ -1,5 +1,5 @@
 // Changing and deleting tests the learner already has.
-import { readingTestSchema, speakingTestSchema } from "@ielts/spec";
+import { readingTestSchema, speakingTestSchema, writingTestSchema } from "@ielts/spec";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { appEvents, attempts, library, tests } from "../db.ts";
@@ -17,13 +17,19 @@ export const editTest = defineTool({
   description:
     "Load an existing test so you can change it, when the learner asks to change, fix or adjust a test they already have (instead of making a new one). " +
     "Returns the whole test. Only tests the learner has not taken can be changed; a taken test's result belongs to its questions, so make a new test for those. " +
-    "Then publish the changed test with replaceTestId: Speaking with speaking_publish (the whole test); Reading with reading_publish_passage for each passage you change, then reading_finalize. " +
+    "Then publish the changed test with replaceTestId: Speaking with speaking_publish (the whole test); Writing with writing_publish (the whole test); Reading with reading_publish_passage for each passage you change, then reading_finalize. " +
     "The test keeps its id and its card. Saved but unsubmitted answers are cleared.",
   input: z.object({ testId: z.string() }),
   async run({ testId }, ctx) {
     const row = tests.get(testId);
     if (!row) return { success: false, text: "No test with that id. Call list_tests." };
     if (attempts.latest(testId)) return { success: false, text: `"${row.title}" has already been taken, so it cannot be changed. Offer to make a new test with the changes instead.` };
+    if (row.kind === "writing") {
+      const test = writingTestSchema.parse(JSON.parse(row.spec));
+      return {
+        text: `Writing test "${row.title}". Change what they asked for, keep the rest, follow the writing-task-writer skill, then call writing_publish with the whole test and replaceTestId "${testId}".\n${JSON.stringify(test)}`,
+      };
+    }
     if (row.kind === "speaking") {
       const test = speakingTestSchema.parse(JSON.parse(row.spec));
       return {

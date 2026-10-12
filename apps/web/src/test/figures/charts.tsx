@@ -1,7 +1,7 @@
 // Line graphs, bar charts, pie charts and tables for Writing Task 1, drawn from the test data.
 import { useId } from "react";
 import type { BarFigure, LineFigure, PieFigure, TableFigure } from "@ielts/spec";
-import { DASHES, FONT, FigureTitle, Legend, Lines, Marker, Patterns, Swatch, fmt, niceScale, ticks, wrap } from "./shared.tsx";
+import { DASHES, FONT, FigureTitle, Legend, Lines, Marker, Patterns, Swatch, fillFor, fmt, niceScale, ticks, wrap } from "./shared.tsx";
 
 export function LineChart({ f }: { f: LineFigure }) {
   const scale = niceScale(Math.max(...f.series.flatMap((s) => s.values)));
@@ -19,6 +19,7 @@ export function LineChart({ f }: { f: LineFigure }) {
         <line x1={L} y1={T + plotH} x2={L + plotW} y2={T + plotH} className="stroke-ink" />
         {ticks(scale).map((v) => (
           <g key={v}>
+            {v > 0 && <line x1={L} y1={y(v)} x2={L + plotW} y2={y(v)} className="stroke-rule-strong" />}
             <line x1={L - 5} y1={y(v)} x2={L} y2={y(v)} className="stroke-ink" />
             <text x={L - 8} y={y(v)} fontSize={FONT} textAnchor="end" dominantBaseline="central" className="fill-ink">
               {fmt(v)}
@@ -195,13 +196,12 @@ export function PieCharts({ f }: { f: PieFigure }) {
                 const i = names.indexOf(s.name);
                 const inside = s.percent >= 9;
                 const lr = inside ? R * 0.62 : R + 14;
-                const fill = i % 5 === 2 ? `url(#${id}-hatch)` : i % 5 === 4 ? `url(#${id}-dots)` : undefined;
-                const cls = i % 5 === 0 ? "fill-ink/80" : i % 5 === 1 ? "fill-ink/30" : i % 5 === 3 ? "fill-surface" : "";
-                const onDark = inside && i % 5 === 0;
-                const halo = inside && (i % 5 === 2 || i % 5 === 4);
+                const { fill, className: cls, dark, busy } = fillFor(id, i);
+                const onDark = inside && dark;
+                const halo = inside && busy;
                 return (
                   <g key={s.name}>
-                    <path d={d} fill={fill} className={`${cls} stroke-ink`} strokeWidth="0.8" />
+                    <path d={d} fill={fill} className={cls} strokeWidth="0.8" />
                     <Lines
                       x={cx + lr * Math.cos(mid)}
                       y={cy + lr * Math.sin(mid)}

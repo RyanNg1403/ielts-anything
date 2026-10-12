@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_TASK1 } from "./writing-samples.ts";
-import { task1Family, type Figure, validateWriting, writingTestSchema, writingWordCount, type Task1, type WritingTest } from "./writing.ts";
+import { roundBand, task1Family, type Figure, type TaskMark, validateWriting, writingOverall, writingTestSchema, writingWordCount, type Task1, type WritingTest } from "./writing.ts";
 
 const drill = (task1: Task1): WritingTest => ({ kind: "writing", mode: "drill", title: "t", topic: "t", task1, task2: null });
 const errors = (t: WritingTest) => validateWriting(t).filter((i) => i.level === "error").map((i) => i.message);
@@ -74,4 +74,23 @@ describe("validateWriting", () => {
 
 it("counts words as IELTS does", () => {
   expect(writingWordCount("In 2010, well-known firms grew by 5% - fast.")).toBe(8);
+});
+
+describe("Writing bands", () => {
+  const mark = (b: number[]): TaskMark => ({
+    task: { band: b[0]!, evidence: "", descriptor: "", check: "" },
+    coherence: { band: b[1]!, evidence: "", descriptor: "", check: "" },
+    lexical: { band: b[2]!, evidence: "", descriptor: "", check: "" },
+    grammar: { band: b[3]!, evidence: "", descriptor: "", check: "" },
+    corrections: [],
+    nextSteps: "",
+  });
+  it("rounds to the nearest half band", () => {
+    expect([6.125, 6.25, 6.6, 6.75].map(roundBand)).toEqual([6, 6.5, 6.5, 7]);
+  });
+  it("counts Task 2 twice", () => {
+    // Task 1 mean 5, Task 2 mean 7: (5 + 14) / 3 = 6.33 -> 6.5
+    expect(writingOverall({ "1": { ...mark([5, 5, 5, 5]), words: 160, band: 5 }, "2": { ...mark([7, 7, 7, 7]), words: 270, band: 7 } })).toBe(6.5);
+    expect(writingOverall({ "2": { ...mark([6, 7, 7, 6]), words: 270, band: 6.5 } })).toBe(6.5);
+  });
 });
