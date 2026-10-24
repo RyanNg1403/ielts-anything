@@ -16,6 +16,7 @@ import {
 import type { CodexAppServer } from "../codex/app-server.ts";
 import { solveReading } from "../codex/solver.ts";
 import { attempts, conversations, tests } from "../db.ts";
+import { latestGenerated, markUsed } from "../writing/images.ts";
 import { defineTool } from "./registry.ts";
 
 /** `replaces` is set while the tutor is changing an existing, untaken test (see edit_test). */
@@ -63,6 +64,16 @@ export function readingTools(codex: CodexAppServer) {
         ctx.emit({ type: "progress", label: `Fixing passage ${passageNumber}` });
         return { success: false, text: `Passage ${passageNumber} was not accepted. Fix every error and submit it again:\n${formatIssues(issues)}` };
       }
+      // An illustration is the image the tutor generated just before this passage (decorative only:
+      // no question may depend on it). An edited passage keeps its old one unless a new one was made.
+      if (passage.illustrated) {
+        const fresh = latestGenerated(ctx.conversationId);
+        const kept = draft.passages[passageNumber - 1]?.image;
+        if (!fresh && !kept)
+          return { success: false, text: `Passage ${passageNumber} is marked as illustrated, but no image was generated. Generate the illustration first, or submit it with illustrated: false.` };
+        passage = { ...passage, image: fresh ?? kept };
+        if (fresh) markUsed(ctx.conversationId, fresh);
+      } else passage = { ...passage, image: undefined };
       draft.passages = [...draft.passages.slice(0, passageNumber - 1), passage];
       draft.mode = mode;
       draft.title = title;

@@ -39,6 +39,15 @@ While writing, deliberately plant:
 - 2-4 named people/organisations each linked to a clear claim, for matching features;
 - a coherent section (a process, a comparison, a sequence of events) for summary/notes/table/flow-chart completion, containing short concrete nouns or noun phrases that can be answers.
 
+## Illustrations (optional)
+
+Some Cambridge passages carry a photograph or drawing under the title; most do not. You decide, passage by passage: illustrate roughly one passage in three, only when a picture suits the text (an animal, a place, an object, an invention, a historical scene), and never when the passage is abstract.
+
+- The picture is decoration. No question may depend on it, and it must not show anything the questions ask about.
+- Generate it with the image generation tool just before submitting the passage, then submit with `illustrated: true`; the app attaches your latest image. Without a fresh image, submit with `illustrated: false`.
+- Style: a realistic black-and-white photograph or a fine black-and-white illustration, as printed in an exam booklet. Landscape, simple composition. No text, labels, captions, logos or watermarks in the image, and no recognisable real people.
+- If image generation is not available, skip the illustration and do not mention it to the learner.
+
 ## Before submitting
 
 Count the words (target ranges above; the full test total must be 2,150-2,750). Read it once as a learner: is every paragraph coherent on its own, and would a non-specialist follow it?

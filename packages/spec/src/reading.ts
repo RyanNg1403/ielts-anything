@@ -192,6 +192,11 @@ export const passageSchema = z.object({
     .default([])
     .describe("Footnoted technical terms, only if essential."),
   blocks: z.array(blockSchema).min(1).max(4),
+  illustrated: z
+    .boolean()
+    .default(false)
+    .describe("true only when you generated an illustration for this passage just before submitting it (see the reading-passage-writer skill)."),
+  image: z.string().optional().describe("Set by the app to the illustration you generated. Leave it out."),
 });
 
 export type Passage = z.infer<typeof passageSchema>;

@@ -56,6 +56,8 @@ Maps and process diagrams are drawn as images, in the style of the Cambridge pap
    - Process: each stage as a simple pictorial drawing of the equipment or material (as in the references), with its circled number (when `numbered`) and its label next to it; arrows between stages exactly as in the data's arrows, in order, with any arrow labels; a cycle ends with an arrow back to the first stage.
    - Maps: the plans one above the other, each with its heading; a north compass when `compass` is true; roads as double lines, water with small wave marks, trees as simple tree symbols, buildings as labelled outlines; every feature placed as its box says (north is up, x left to right, y top to bottom on a 100 x 70 grid). Features that did not change look and sit exactly the same in both plans.
    - Portrait layout that fits a half page, with large, legible labels.
+If you have no image generation tool, do not try another route (no scripts, no API keys): tell the learner in one sentence that maps and process diagrams are not available right now, and offer a chart, table or mixed Task 1 on the same topic instead.
+
 3. Call `writing_publish`. The app attaches your latest image and checks it against the data. If it lists mismatches, generate a corrected image (or fix the data if the data was wrong) and publish again.
 
 ## Task 1: the first line
