@@ -19,9 +19,9 @@ await Promise.all(
     await page.waitForURL(/#\/chat\//);
     const chat = page.url().split("#/chat/")[1];
     console.log(`${stamp()} ${tag} chat ${chat}: ${request}`);
-    const card = page.locator("button", { hasText: "Writing ·" }).first();
+    const card = page.locator("button", { hasText: /(Reading|Writing|Speaking) ·/ }).first();
     // Answer any clarifying form with its first option, so the run never waits on a person.
-    for (let t = 0; t < 180 && !(await card.isVisible()); t++) {
+    for (let t = 0; t < 360 && !(await card.isVisible()); t++) {
       const option = page.locator('[role="radio"], [role="option"]').first();
       if (await option.isVisible().catch(() => false)) {
         console.log(`${stamp()} ${tag} answering a clarifying question`);
@@ -36,6 +36,11 @@ await Promise.all(
     }
     console.log(`${stamp()} ${tag} card: ${(await card.innerText()).replace(/\n+/g, " | ")}`);
     console.log(`${tag} chat text:\n${(await page.locator("main").innerText()).slice(-800)}`);
+    if (!/Writing ·/.test(await card.innerText())) {
+      const href = await card.evaluate(() => location.href);
+      console.log(`${tag} chat url ${href}`);
+      return;
+    }
     await card.click();
     await page.waitForURL(/#\/test\//);
     const id = page.url().split("#/test/")[1];

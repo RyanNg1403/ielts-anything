@@ -90,6 +90,11 @@ export function PassageView({
     <article ref={root} onMouseUp={onMouseUp} className="mx-auto max-w-[68ch] px-6 py-8 sm:px-10">
       <h2 className="font-serif text-[26px] font-semibold leading-tight text-ink">{passage.title}</h2>
       {passage.subtitle && <p className="mt-2 font-serif text-[17px] italic leading-relaxed text-ink-soft">{passage.subtitle}</p>}
+      {passage.image && (
+        <figure className="mt-6 overflow-hidden rounded-md bg-white p-2">
+          <img src={`/api/figures/${passage.image}`} alt="" className="mx-auto block max-h-80 max-w-full" />
+        </figure>
+      )}
       <div className="mt-6 space-y-4 font-serif text-[17px] leading-[1.75] text-ink">
         {passage.paragraphs.map((text, i) => {
           const hs = highlights.map((h, k) => ({ ...h, i: k })).filter((h) => h.para === i);
