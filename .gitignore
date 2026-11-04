@@ -4,6 +4,7 @@
 # Copyrighted Cambridge IELTS books and their extractions: local reference only, never publish
 cam books/
 corpus/
+research/ielts/cambridge/question_status.csv
 
 # Local tooling
 .venv/

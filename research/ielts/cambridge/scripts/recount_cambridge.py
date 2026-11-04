@@ -801,8 +801,8 @@ def regenerate_reports(
         "All "
         + str(status_total)
         + " status slots are classified across 40 tests, one row per keyed question in "
-        "[question_status.csv](question_status.csv). Rows retain book, test, question, "
-        "family, answer label and key-page source only. Local answer-key page locators, "
+        "question_status.csv, a local ledger of the answer keys that is not published (gitignored). "
+        "Local answer-key page locators, "
         "in Test 1-4 order: C12 pp. 117, 119, 121, 123; C13 pp. 119, 121, 123, 125; "
         "C14 pp. 120, 122, 124, 126; C15 pp. 120, 122, 124, 126; C16 pp. 122, 124, "
         "126, 128; C17 pp. 120, 122, 124, 126; C18 pp. 120, 122, 124, 126; C19 pp. "
