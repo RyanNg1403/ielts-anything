@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { fileURLToPath } from "node:url";
+import { SKILLS_DIR, WEB_DIR } from "./paths.ts";
 import { WebSocketServer, type WebSocket } from "ws";
 import { CodexAppServer } from "./codex/app-server.ts";
 import { CODEX_HOME, ensureCodexHome } from "./codex/home.ts";
@@ -48,7 +49,6 @@ import { checkOpenAIKey, getSettings, publicSettings, saveSettings, VOICE_PROVID
 import type { Context } from "hono";
 
 const PORT = Number(process.env.PORT ?? 8787);
-const SKILLS_DIR = fileURLToPath(new URL("../../../skills", import.meta.url));
 
 const { loggedIn } = ensureCodexHome();
 const codex = new CodexAppServer({
@@ -495,6 +495,9 @@ app.get("/api/conversations/:id/history", async (c) => {
   const id = c.req.param("id");
   return c.json({ turns: await hub.history(id), events: appEvents.list(id) });
 });
+
+// The npm package serves the built web app itself; in development Vite does.
+if (existsSync(WEB_DIR)) app.use("/*", serveStatic({ root: WEB_DIR }));
 
 const server = serve({ fetch: app.fetch, port: PORT, hostname: "127.0.0.1" }, () => console.log(`server on http://localhost:${PORT}`));
 

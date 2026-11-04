@@ -1,6 +1,6 @@
 # ielts-anything: build plan
 
-Status: **draft for approval**. Nothing is built yet.
+Status: the original build plan, kept for reference. M0-M4 are built (Reading, Listening, Writing and Speaking); see the README for what ships.
 
 ## 1. What we are building
 
@@ -114,7 +114,7 @@ flowchart LR
 
 ## 7. Stack
 
-TypeScript throughout: **Vite + React** front end, **Node (Hono) + ws** server, **zod** schemas shared by both, **SQLite** (better-sqlite3), Vitest and Playwright for tests. Kokoro runs as an optional Python sidecar. Repo layout: `apps/web`, `apps/server`, `packages/spec` (schemas and validators), `skills/`, `research/` (kept), `corpus/` (gitignored).
+TypeScript throughout: **Vite + React** front end, **Node (Hono) + ws** server, **zod** schemas shared by both, **SQLite** (the built-in `node:sqlite`), Vitest for tests. Kokoro runs in the server through `kokoro-js`. Repo layout: `apps/web`, `apps/server`, `packages/spec` (schemas and validators), `skills/`, `research/` (kept), `corpus/` (gitignored).
 
 ## 8. Milestones
 

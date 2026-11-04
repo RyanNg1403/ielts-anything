@@ -13,11 +13,10 @@ IELTS Anything writes the test about stuff you'd doomscroll anyway: football, K-
 ## Quickstart ⚡
 
 ```bash
-git clone https://github.com/RyanNg1403/ielts-anything.git
-cd ielts-anything && npm install && npm run dev
+npx ielts-anything
 ```
 
-Open http://127.0.0.1:5173, type *"a Listening test about my fave football club"*, go touch grass for a sec 🌱
+It opens in your browser. Type *"a Listening test about my fave football club"*, go touch grass for a sec 🌱
 
 ## What's free 💸
 
@@ -89,8 +88,17 @@ skills          The tutor's rulebooks and Writing reference drawings
 research        Format research and sources
 ```
 
-**Env overrides** (`.env`): `IELTS_HOME`, `IELTS_MODEL`, `IELTS_EFFORT`, `IELTS_VOICE`, `IELTS_EXAMINER_VOICE`, `PORT`.
+**Options:** `npx ielts-anything --port 9000 --no-open`. Environment overrides: `IELTS_HOME`, `IELTS_MODEL`, `IELTS_EFFORT`, `IELTS_VOICE`, `IELTS_EXAMINER_VOICE`, `PORT`.
 
-**Dev:** `npm test`, `npm run typecheck`, and `npx tsx apps/server/scripts/render-listening.ts` to hear the voices.
+**From source:**
+
+```bash
+git clone https://github.com/RyanNg1403/ielts-anything.git
+cd ielts-anything && npm install && npm run dev   # http://127.0.0.1:5173
+```
+
+`npm test`, `npm run typecheck`, `npm run build` (the npm package), and `npx tsx apps/server/scripts/render-listening.ts` to hear the voices.
+
+**Releasing:** bump `version` in `package.json` and `CHANGELOG.md`, then push a matching tag (`git tag v0.0.2 && git push origin v0.0.2`). GitHub Actions tests, publishes to npm and creates the release.
 
 **The serious bit (sorry) 🧐** This is Cambridge-format practice, not official tests, and it isn't affiliated with IELTS, the British Council, IDP or Cambridge. The repo contains only counts, rules and paraphrases from studying Cambridge IELTS 12–21, never the books, passages, scripts or audio. Band scores are estimates: great for practice, not for your visa officer. MIT licence.

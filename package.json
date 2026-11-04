@@ -1,26 +1,62 @@
 {
   "name": "ielts-anything",
-  "private": true,
+  "version": "0.0.1",
+  "description": "IELTS Academic practice on any topic: Cambridge-format Reading, Listening, Writing and Speaking tests, written and marked by your Codex subscription.",
+  "keywords": [
+    "ielts",
+    "english",
+    "exam",
+    "practice",
+    "codex",
+    "education"
+  ],
+  "homepage": "https://github.com/RyanNg1403/ielts-anything#readme",
+  "bugs": "https://github.com/RyanNg1403/ielts-anything/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RyanNg1403/ielts-anything.git"
+  },
+  "license": "MIT",
+  "author": "Nguyễn Thuận Phát",
   "type": "module",
+  "bin": {
+    "ielts-anything": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @ielts/server\" \"npm run dev -w @ielts/web\"",
-    "build": "npm run build -w @ielts/web",
+    "build": "node scripts/build-package.mjs",
+    "start": "node dist/cli.js",
     "typecheck": "tsc -p packages/spec && tsc -p apps/server && tsc -p apps/web",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.4",
+    "@huggingface/transformers": "3.8.1",
+    "hono": "4.13.13",
+    "kokoro-js": "1.2.1",
+    "ws": "8.22.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
     "concurrently": "10.0.6",
+    "esbuild": "0.28.2",
     "playwright-core": "^1.64.0",
     "typescript": "7.0.2",
     "vitest": "5.0.3"
   },
   "engines": {
-    "node": ">=22"
-  },
-  "license": "MIT"
+    "node": ">=22.13"
+  }
 }

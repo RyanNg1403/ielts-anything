@@ -3,6 +3,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { createInterface } from "node:readline";
+import { VERSION } from "../paths.ts";
 
 export type Notification = { method: string; params: any };
 export type ServerRequest = { id: number | string; method: string; params: any };
@@ -38,6 +39,11 @@ export class CodexAppServer extends EventEmitter<{ notification: [Notification];
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.proc = proc;
+    // Without this, a missing codex binary (ENOENT) crashes the process instead of failing start().
+    const spawned = new Promise<void>((resolve, reject) => {
+      proc.once("spawn", resolve);
+      proc.once("error", (err) => reject(new Error(`Could not start "${this.opts.bin ?? "codex"} app-server": ${err.message}`)));
+    });
     proc.on("exit", (code) => {
       for (const p of this.pending.values()) p.reject(new Error(`codex app-server exited (${code}) during ${p.method}`));
       this.pending.clear();
@@ -47,8 +53,9 @@ export class CodexAppServer extends EventEmitter<{ notification: [Notification];
     createInterface({ input: proc.stderr }).on("line", (line) => this.opts.log?.(line));
     createInterface({ input: proc.stdout }).on("line", (line) => this.onLine(line));
 
+    await spawned;
     await this.request("initialize", {
-      clientInfo: { name: "ielts-anything", title: "IELTS Anything", version: "0.1.0" },
+      clientInfo: { name: "ielts-anything", title: "IELTS Anything", version: VERSION },
       capabilities: { experimentalApi: true, requestAttestation: false },
     });
     this.write({ jsonrpc: "2.0", method: "initialized" });

@@ -2,15 +2,15 @@
 // each image the tutor generates in a chat until writing_publish attaches it to a figure.
 import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { APP_HOME, WORKSPACE } from "../codex/home.ts";
+import { SKILLS_DIR } from "../paths.ts";
 
 export const FIGURES_DIR = join(APP_HOME, "figures");
 mkdirSync(FIGURES_DIR, { recursive: true });
 
 /** Original figures in the Cambridge style that the tutor studies before drawing; shipped with the skill. */
-const REFS_SOURCE = fileURLToPath(new URL("../../../../skills/writing-task-writer/references", import.meta.url));
+const REFS_SOURCE = join(SKILLS_DIR, "writing-task-writer", "references");
 export const REFS_DIR = join(WORKSPACE, "references");
 export function installReferences() {
   if (!existsSync(REFS_SOURCE)) return false;

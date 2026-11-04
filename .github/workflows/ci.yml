@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Install the packed package and run it
+        run: |
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund ./ielts-anything-*.tgz
+          npx ielts-anything --version
+          npx ielts-anything --help

@@ -1,7 +1,7 @@
 // Writing marking: each task is marked on its own by a text model following the writing-assessor
 // skill (the official descriptors); code then computes the task and overall bands.
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import {
   WRITING_CRITERIA,
   WRITING_WRAPPER,
@@ -17,9 +17,10 @@ import {
 } from "@ielts/spec";
 import type { CodexAppServer } from "../codex/app-server.ts";
 import { runStructured } from "../codex/structured.ts";
+import { SKILLS_DIR } from "../paths.ts";
 import { figurePath } from "./images.ts";
 
-const GUIDE = readFileSync(fileURLToPath(new URL("../../../../skills/writing-assessor/SKILL.md", import.meta.url)), "utf8").replace(/^---[\s\S]*?---\s*/, "");
+const GUIDE = readFileSync(join(SKILLS_DIR, "writing-assessor", "SKILL.md"), "utf8").replace(/^---[\s\S]*?---\s*/, "");
 
 export type WritingResponses = Partial<Record<`${WritingTaskNumber}`, string>>;
 

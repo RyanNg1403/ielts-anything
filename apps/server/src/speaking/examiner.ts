@@ -1,11 +1,12 @@
 // The voice examiner's script for one Speaking test. The room listens for the fixed sentences below
 // to know when a part changes, and steers timing with "[App]" notes (session.context.append).
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { EXAMINER_SIGNALS, type SpeakingTest } from "@ielts/spec";
+import { SKILLS_DIR } from "../paths.ts";
 
 /** How to mark, from the speaking-assessor skill (without its front matter and title). */
-const GUIDE = readFileSync(fileURLToPath(new URL("../../../../skills/speaking-assessor/SKILL.md", import.meta.url)), "utf8")
+const GUIDE = readFileSync(join(SKILLS_DIR, "speaking-assessor", "SKILL.md"), "utf8")
   .replace(/^---[\s\S]*?---\n/, "")
   .replace(/^# .*\n/m, "")
   .trim();
