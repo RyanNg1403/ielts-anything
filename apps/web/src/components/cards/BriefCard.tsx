@@ -1,5 +1,5 @@
 import type { BriefCard as Brief } from "../../api.ts";
-import { FAMILY_LABELS } from "@ielts/spec";
+import { familyLabel } from "@ielts/spec";
 import { skillMeta } from "../../skills.ts";
 
 /** The practice plan, drawn like the cover sheet of an IELTS paper. */
@@ -28,7 +28,7 @@ export function BriefCard({ card }: { card: Brief }) {
           <div className="mt-5 flex flex-wrap gap-1.5">
             {card.questionTypes.map((t) => (
               <span key={t} className="rounded-md px-2 py-0.5 text-[13px]" style={{ background: `var(--color-${card.skill}-wash)`, color: accent }}>
-                {FAMILY_LABELS[t as keyof typeof FAMILY_LABELS] ?? t}
+                {familyLabel(t)}
               </span>
             ))}
           </div>

@@ -5,3 +5,5 @@ export * from "./mark.ts";
 export * from "./candidate.ts";
 export * from "./speaking.ts";
 export * from "./writing.ts";
+export * from "./listening.ts";
+export * from "./listening-samples.ts";

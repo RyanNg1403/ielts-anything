@@ -2,7 +2,7 @@ import { useState } from "react";
 import { pct } from "../analytics.ts";
 import { useProgress } from "../data.ts";
 import { go } from "../router.ts";
-import { FAMILY_LABELS } from "@ielts/spec";
+import { familyLabel } from "@ielts/spec";
 import { SKILLS } from "../skills.ts";
 
 export function ProgressPage() {
@@ -12,7 +12,11 @@ export function ProgressPage() {
   const empty = data.history.length === 0;
 
   const families = Object.entries(data.families)
-    .map(([family, v]) => ({ family, label: FAMILY_LABELS[family as keyof typeof FAMILY_LABELS] ?? family, ...v }))
+    .map(([key, v]) => {
+      const family = key.split(":").at(-1)!;
+      const skill = SKILLS.find((s) => s.id === v.skill)?.label ?? v.skill;
+      return { family: key, label: `${skill} · ${familyLabel(family)}`, ...v };
+    })
     .sort((a, b) => a.correct / a.total - b.correct / b.total);
 
   return (

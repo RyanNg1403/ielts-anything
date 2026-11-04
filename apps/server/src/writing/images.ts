@@ -1,6 +1,6 @@
 // Task 1 maps and process diagrams are drawn by the tutor with Codex image generation. The app keeps
 // each image the tutor generates in a chat until writing_publish attaches it to a figure.
-import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
@@ -9,12 +9,14 @@ import { APP_HOME, WORKSPACE } from "../codex/home.ts";
 export const FIGURES_DIR = join(APP_HOME, "figures");
 mkdirSync(FIGURES_DIR, { recursive: true });
 
-/** Cambridge figures the tutor studies for style before drawing. Local copies only (copyrighted). */
-const REFS_SOURCE = fileURLToPath(new URL("../../../../corpus/derived/figure-refs", import.meta.url));
+/** Original figures in the Cambridge style that the tutor studies before drawing; shipped with the skill. */
+const REFS_SOURCE = fileURLToPath(new URL("../../../../skills/writing-task-writer/references", import.meta.url));
 export const REFS_DIR = join(WORKSPACE, "references");
 export function installReferences() {
-  if (existsSync(REFS_SOURCE)) cpSync(REFS_SOURCE, REFS_DIR, { recursive: true });
-  return existsSync(REFS_DIR);
+  if (!existsSync(REFS_SOURCE)) return false;
+  rmSync(REFS_DIR, { recursive: true, force: true });
+  cpSync(REFS_SOURCE, REFS_DIR, { recursive: true });
+  return true;
 }
 
 const generated = new Map<string, string[]>();

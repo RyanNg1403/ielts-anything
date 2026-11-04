@@ -1,12 +1,13 @@
-// Objective marking for Reading. One mark per question; text answers must match an
+// Objective marking for Reading and Listening. One mark per question; text answers must match an
 // accepted form and respect the word limit; choose-N groups accept letters in any order.
 import { blockQuestions, type QuestionBlock, type ReadingTest } from "./reading.ts";
+import type { ListeningFamily, ListeningTest } from "./listening.ts";
 import { fitsLimit } from "./validate.ts";
 
 export type KeyEntry = {
   q: number;
-  passage: number; // 1-based
-  family: QuestionBlock["family"];
+  passage: number; // 1-based Reading passage, or Listening part position
+  family: QuestionBlock["family"] | ListeningFamily;
   display: string; // what the learner sees as the correct answer
   accept: string[];
   limit?: { maxWords: number; allowNumber: boolean };
@@ -23,44 +24,39 @@ const clean = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-export function answerKey(test: ReadingTest): KeyEntry[] {
+type AnyBlock = { family: KeyEntry["family"] } & Record<string, any>;
+
+/** Key entries for one passage or part. Completion families have a word limit; the rest are letters or labels. */
+function keyFromBlocks(blocks: AnyBlock[], passage: number): KeyEntry[] {
   const out: KeyEntry[] = [];
-  test.passages.forEach((p, pi) => {
-    for (const b of p.blocks) {
-      const base = { passage: pi + 1, family: b.family };
-      switch (b.family) {
-        case "mcq_multi":
-          b.qs.forEach((q) =>
-            out.push({ ...base, q, display: b.answers.join(", "), accept: b.answers, group: b.qs, evidence: b.evidence, explanation: b.explanation }),
-          );
-          break;
-        case "sentence_completion":
-        case "short_answer":
-        case "summary_completion":
-        case "note_completion":
-        case "table_completion":
-        case "flowchart_completion":
-          for (const it of b.items)
-            out.push({ ...base, q: it.q, display: it.answer, accept: [it.answer, ...it.alternatives], limit: b.wordLimit, evidence: [it.evidence], explanation: it.explanation });
-          break;
-        case "matching_headings":
-          for (const it of b.items) out.push({ ...base, q: it.q, display: it.answer, accept: [it.answer], evidence: [], explanation: it.explanation });
-          break;
-        default:
-          for (const it of b.items) out.push({ ...base, q: it.q, display: it.answer, accept: [it.answer], evidence: it.evidence ? [it.evidence] : [], explanation: it.explanation });
-      }
+  for (const b of blocks) {
+    const base = { passage, family: b.family };
+    if (b.family === "mcq_multi") {
+      for (const q of b.qs as number[]) out.push({ ...base, q, display: b.answers.join(", "), accept: b.answers, group: b.qs, evidence: b.evidence, explanation: b.explanation });
+    } else if (b.wordLimit) {
+      for (const it of b.items) out.push({ ...base, q: it.q, display: it.answer, accept: [it.answer, ...it.alternatives], limit: b.wordLimit, evidence: [it.evidence], explanation: it.explanation });
+    } else {
+      for (const it of b.items) out.push({ ...base, q: it.q, display: it.answer, accept: [it.answer], evidence: it.evidence ? [it.evidence] : [], explanation: it.explanation });
     }
-  });
-  return out.sort((a, b) => a.q - b.q);
+  }
+  return out;
+}
+
+export function answerKey(test: ReadingTest): KeyEntry[] {
+  return test.passages.flatMap((p, pi) => keyFromBlocks(p.blocks, pi + 1)).sort((a, b) => a.q - b.q);
+}
+
+export function listeningAnswerKey(test: ListeningTest): KeyEntry[] {
+  return test.parts.flatMap((p, pi) => keyFromBlocks(p.blocks, pi + 1)).sort((a, b) => a.q - b.q);
 }
 
 export type MarkedItem = { q: number; given: string; correct: boolean; key: KeyEntry };
 export type ReadingResult = { raw: number; total: number; band: number | null; items: MarkedItem[] };
+export type ListeningResult = ReadingResult;
 
-export function markReading(test: ReadingTest, responses: Record<number, string>): ReadingResult {
-  const key = answerKey(test);
+function markKey(key: KeyEntry[], responses: Record<number, string>): MarkedItem[] {
   const usedInGroup = new Map<string, Set<string>>();
-  const items = key.map((k): MarkedItem => {
+  return key.map((k): MarkedItem => {
     const given = (responses[k.q] ?? "").trim();
     let correct = false;
     if (k.group) {
@@ -79,14 +75,33 @@ export function markReading(test: ReadingTest, responses: Record<number, string>
     }
     return { q: k.q, given, correct, key: k };
   });
+}
+
+export function markReading(test: ReadingTest, responses: Record<number, string>): ReadingResult {
+  const items = markKey(answerKey(test), responses);
   const raw = items.filter((i) => i.correct).length;
-  return { raw, total: key.length, band: key.length === 40 ? readingBand(raw) : null, items };
+  return { raw, total: items.length, band: items.length === 40 ? readingBand(raw) : null, items };
+}
+
+export function markListening(test: ListeningTest, responses: Record<number, string>): ListeningResult {
+  const items = markKey(listeningAnswerKey(test), responses);
+  const raw = items.filter((i) => i.correct).length;
+  return { raw, total: items.length, band: items.length === 40 ? listeningBand(raw) : null, items };
 }
 
 /** Approximate Academic Reading band (IDP reference table). Versions vary; always label as an estimate. */
 export function readingBand(raw: number): number | null {
   const table: [number, number][] = [
     [39, 9], [37, 8.5], [35, 8], [33, 7.5], [30, 7], [27, 6.5], [23, 6], [20, 5.5], [16, 5], [13, 4.5], [10, 4], [7, 3.5], [5, 3],
+  ];
+  for (const [min, band] of table) if (raw >= min) return band;
+  return null;
+}
+
+/** Approximate Listening band (IDP reference table, research/ielts/listening.md). Below 10 marks only the raw score is reported. */
+export function listeningBand(raw: number): number | null {
+  const table: [number, number][] = [
+    [39, 9], [37, 8.5], [35, 8], [32, 7.5], [30, 7], [26, 6.5], [23, 6], [18, 5.5], [16, 5], [13, 4.5], [10, 4],
   ];
   for (const [min, band] of table) if (raw >= min) return band;
   return null;

@@ -12,8 +12,12 @@ import { readingTools } from "./tools/reading.ts";
 import { appEvents, attempts, library, tests } from "./db.ts";
 import { reviewTools } from "./tools/review.ts";
 import {
+  LISTENING_PART_NAMES,
+  listeningTestSchema,
+  markListening,
   markReading,
   readingTestSchema,
+  toListeningCandidate,
   speakingMetricsSchema,
   speakingParts,
   speakingTestSchema,
@@ -36,8 +40,12 @@ import { figurePath, installReferences } from "./writing/images.ts";
 import { markWriting } from "./writing/marking.ts";
 import { answerDeleteRequest, deleteTest, manageTools } from "./tools/manage.ts";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { deleteRecording, recordingExt, recordingFile, saveRecording } from "./recordings.ts";
+import { listeningTools } from "./tools/listening.ts";
+import { audioStatus, ensureAudio, partFile } from "./listening/audio.ts";
+import { checkOpenAIKey, getSettings, publicSettings, saveSettings, VOICE_PROVIDERS } from "./settings.ts";
+import type { Context } from "hono";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const SKILLS_DIR = fileURLToPath(new URL("../../../skills", import.meta.url));
@@ -51,9 +59,24 @@ const codex = new CodexAppServer({
 });
 await codex.start();
 await codex.request("skills/extraRoots/set", { extraRoots: [SKILLS_DIR] });
-if (!installReferences()) console.error("No Cambridge figure references in corpus/derived/figure-refs: maps and process diagrams will be drawn without them.");
+if (!installReferences()) console.error("No figure references in skills/writing-task-writer/references: maps and process diagrams will be drawn without them.");
 
-const tools = new ToolRegistry([askLearner, showBrief, ...readingTools(codex), speakingPublish, ...writingTools(codex), ...reviewTools, ...manageTools]);
+/** A Listening recording moved on: open cards and test screens refresh. */
+function onAudio(testId: string) {
+  const row = tests.get(testId);
+  if (row) hub.notify(row.conversation_id, { type: "test_updated", testId });
+}
+
+const tools = new ToolRegistry([
+  askLearner,
+  showBrief,
+  ...readingTools(codex),
+  ...listeningTools(codex, onAudio),
+  speakingPublish,
+  ...writingTools(codex),
+  ...reviewTools,
+  ...manageTools,
+]);
 const speaking = new SpeakingSessions(codex);
 const hub = new Hub(codex, tools);
 
@@ -122,6 +145,21 @@ app.get("/api/tests/:id", (c) => {
   if (!row) return c.json({ error: "Test not found." }, 404);
   const attempt = attempts.latest(row.id);
   const raw = JSON.parse(row.spec);
+  if (row.kind === "listening") {
+    // The script and answers stay on the server until the learner has submitted; so does the
+    // transcript in the audio cues.
+    const spec = listeningTestSchema.parse(raw);
+    ensureAudio(row.id, spec, () => onAudio(row.id));
+    const audio = audioStatus(row.id, spec);
+    return c.json({
+      id: row.id,
+      conversationId: conversations.get(row.conversation_id) ? row.conversation_id : null,
+      kind: row.kind,
+      test: attempt ? spec : toListeningCandidate(spec),
+      audio: audio.status === "ready" && !attempt ? { ...audio, parts: audio.parts.map((p) => ({ duration: p.duration, cues: [] })) } : audio,
+      attempt: attempt ? { ...attempt, responses: JSON.parse(attempt.responses), result: JSON.parse(attempt.result) } : null,
+    });
+  }
   // Answers (and Speaking questions) are only sent once the learner has submitted.
   // Writing tasks are open from the start, as in the real booklet.
   const test =
@@ -152,6 +190,66 @@ app.get("/api/figures/:id", (c) => {
   } catch {
     return c.json({ error: "Figure not found." }, 404);
   }
+});
+
+/** Serve an audio file, with the range requests browsers use to seek. */
+function sendAudio(c: Context, path: string, type: string) {
+  const audio = readFileSync(path);
+  const range = /bytes=(\d*)-(\d*)/.exec(c.req.header("range") ?? "");
+  if (range) {
+    const start = range[1] ? Number(range[1]) : 0;
+    const end = range[2] ? Math.min(Number(range[2]), audio.length - 1) : audio.length - 1;
+    return c.body(audio.subarray(start, end + 1), 206, {
+      "content-type": type,
+      "content-range": `bytes ${start}-${end}/${audio.length}`,
+      "accept-ranges": "bytes",
+    });
+  }
+  return c.body(audio, 200, { "content-type": type, "accept-ranges": "bytes" });
+}
+
+// ---- Listening recordings ----
+
+app.get("/api/tests/:id/audio/:part", (c) => {
+  const row = tests.get(c.req.param("id"));
+  const part = Number(c.req.param("part"));
+  if (!row || row.kind !== "listening" || !Number.isInteger(part)) return c.json({ error: "Recording not found." }, 404);
+  const file = partFile(row.id, part);
+  if (audioStatus(row.id, listeningTestSchema.parse(JSON.parse(row.spec))).status !== "ready" || !existsSync(file)) return c.json({ error: "The recording is not ready yet." }, 404);
+  return sendAudio(c, file, "audio/wav");
+});
+
+/** Record a test's audio again after a failure (e.g. after adding an OpenAI key). */
+app.post("/api/tests/:id/audio", (c) => {
+  const row = tests.get(c.req.param("id"));
+  if (!row || row.kind !== "listening") return c.json({ error: "Listening test not found." }, 404);
+  ensureAudio(row.id, listeningTestSchema.parse(JSON.parse(row.spec)), () => onAudio(row.id), { retry: true });
+  return c.json({ ok: true });
+});
+
+// ---- Settings ----
+
+app.get("/api/settings", (c) => c.json(publicSettings()));
+
+const settingsPatch = z.object({ listeningVoices: z.enum(VOICE_PROVIDERS).optional(), openaiKey: z.string().trim().nullable().optional() });
+
+app.put("/api/settings", async (c) => {
+  const parsed = settingsPatch.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid settings." }, 400);
+  const patch = parsed.data;
+  const next = { ...getSettings() };
+  if (patch.openaiKey !== undefined) {
+    if (patch.openaiKey) {
+      const problem = await checkOpenAIKey(patch.openaiKey);
+      if (problem) return c.json({ error: problem }, 400);
+    }
+    next.openaiKey = patch.openaiKey || null;
+    if (!next.openaiKey) next.listeningVoices = "kokoro";
+  }
+  if (patch.listeningVoices) next.listeningVoices = patch.listeningVoices;
+  if (next.listeningVoices === "openai" && !next.openaiKey) return c.json({ error: "Add your OpenAI API key first." }, 400);
+  saveSettings(next);
+  return c.json(publicSettings(next));
 });
 
 app.delete("/api/tests/:id", (c) => {
@@ -187,19 +285,7 @@ app.delete("/api/attempts/:id", (c) => {
 app.get("/api/attempts/:id/recording", (c) => {
   const file = recordingFile(c.req.param("id"));
   if (!file) return c.json({ error: "No recording for this attempt." }, 404);
-  const audio = readFileSync(file.path);
-  const range = /bytes=(\d*)-(\d*)/.exec(c.req.header("range") ?? "");
-  // Browsers seek audio with range requests.
-  if (range) {
-    const start = range[1] ? Number(range[1]) : 0;
-    const end = range[2] ? Math.min(Number(range[2]), audio.length - 1) : audio.length - 1;
-    return c.body(audio.subarray(start, end + 1), 206, {
-      "content-type": file.type,
-      "content-range": `bytes ${start}-${end}/${audio.length}`,
-      "accept-ranges": "bytes",
-    });
-  }
-  return c.body(audio, 200, { "content-type": file.type, "accept-ranges": "bytes" });
+  return sendAudio(c, file.path, file.type);
 });
 
 // ---- Speaking: live examiner sessions and marking ----
@@ -330,8 +416,9 @@ app.post("/api/tests/:id/attempts", async (c) => {
     }
   }
   const { responses, elapsedSec } = await c.req.json<{ responses: Record<string, string>; elapsedSec?: number }>();
-  const spec = readingTestSchema.parse(JSON.parse(row.spec));
-  const result = markReading(spec, Object.fromEntries(Object.entries(responses).map(([q, a]) => [Number(q), a])));
+  const given = Object.fromEntries(Object.entries(responses).map(([q, a]) => [Number(q), a]));
+  const spec = row.kind === "listening" ? listeningTestSchema.parse(JSON.parse(row.spec)) : readingTestSchema.parse(JSON.parse(row.spec));
+  const result = spec.kind === "listening" ? markListening(spec, given) : markReading(spec, given);
   const attempt = { id: randomUUID(), test_id: row.id, responses: JSON.stringify(responses), result: JSON.stringify(result), elapsed_sec: elapsedSec ?? null };
   attempts.insert(attempt);
   library.clearProgress(row.id);
@@ -363,6 +450,16 @@ app.get("/api/tests", (c) =>
         const parts = speakingParts(speakingTestSchema.parse(JSON.parse(spec)));
         return { ...r, answeredCount, status, parts: parts.map((p) => SPEAKING_PART_NAMES[p]), families: [] };
       }
+      if (r.kind === "listening") {
+        const t = listeningTestSchema.parse(JSON.parse(spec));
+        return {
+          ...r,
+          answeredCount,
+          status,
+          parts: t.parts.map((p) => `Part ${p.number}: ${p.title || LISTENING_PART_NAMES[p.number]}`),
+          families: [...new Set(t.parts.flatMap((p) => p.blocks.map((b) => b.family)))],
+        };
+      }
       const t = JSON.parse(spec) as { passages: { title: string; blocks: { family: string }[] }[] };
       return {
         ...r,
@@ -384,7 +481,8 @@ app.get("/api/progress", (c) => {
     // Speaking still being marked, or too short to mark, has no score yet.
     if ((result.kind === "speaking" || result.kind === "writing") && result.band == null) return [];
     for (const i of result.items ?? []) {
-      const f = (families[i.key.family] ??= { correct: 0, total: 0, skill: r.kind });
+      // Reading and Listening share family names (multiple choice, note completion): keep them apart.
+      const f = (families[`${r.kind}:${i.key.family}`] ??= { correct: 0, total: 0, skill: r.kind });
       f.total += 1;
       if (i.correct) f.correct += 1;
     }

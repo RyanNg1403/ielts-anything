@@ -1,15 +1,18 @@
 // Changing and deleting tests the learner already has.
-import { readingTestSchema, speakingTestSchema, writingTestSchema } from "@ielts/spec";
+import { listeningTestSchema, readingTestSchema, speakingTestSchema, writingTestSchema } from "@ielts/spec";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { appEvents, attempts, library, tests } from "../db.ts";
+import { deleteAudio } from "../listening/audio.ts";
 import { deleteRecording } from "../recordings.ts";
+import { startListeningEdit } from "./listening.ts";
 import { startReadingEdit } from "./reading.ts";
 import { defineTool } from "./registry.ts";
 
 /** Remove a test with its attempts, saved answers and recordings. */
 export function deleteTest(id: string) {
   for (const attemptId of tests.delete(id)) deleteRecording(attemptId);
+  deleteAudio(id);
 }
 
 export const editTest = defineTool({
@@ -17,7 +20,8 @@ export const editTest = defineTool({
   description:
     "Load an existing test so you can change it, when the learner asks to change, fix or adjust a test they already have (instead of making a new one). " +
     "Returns the whole test. Only tests the learner has not taken can be changed; a taken test's result belongs to its questions, so make a new test for those. " +
-    "Then publish the changed test with replaceTestId: Speaking with speaking_publish (the whole test); Writing with writing_publish (the whole test); Reading with reading_publish_passage for each passage you change, then reading_finalize. " +
+    "Then publish the changed test with replaceTestId: Speaking with speaking_publish (the whole test); Writing with writing_publish (the whole test); Reading with reading_publish_passage for each passage you change, then reading_finalize; " +
+    "Listening with listening_publish_part for each part you change, then listening_finalize (changing what is said records the audio again). " +
     "The test keeps its id and its card. Saved but unsubmitted answers are cleared.",
   input: z.object({ testId: z.string() }),
   async run({ testId }, ctx) {
@@ -36,6 +40,15 @@ export const editTest = defineTool({
         text:
           `Speaking test "${row.title}". Never show or hint at its questions to the learner. Change what they asked for, keep the rest, follow the speaking-test-writer skill, ` +
           `then call speaking_publish with the whole test and replaceTestId "${testId}".\n${JSON.stringify(test)}`,
+      };
+    }
+    if (row.kind === "listening") {
+      const test = listeningTestSchema.parse(JSON.parse(row.spec));
+      startListeningEdit(ctx.conversationId, testId, test);
+      return {
+        text:
+          `Listening test "${row.title}" is loaded for changing. Follow the listening skills, resubmit only the parts you change with listening_publish_part and replaceTestId "${testId}" ` +
+          `(same part numbers, question numbers still continuous), then call listening_finalize. Never show the script or answers to the learner.\n${JSON.stringify(test)}`,
       };
     }
     const test = readingTestSchema.parse(JSON.parse(row.spec));

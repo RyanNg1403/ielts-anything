@@ -1,6 +1,6 @@
 import { createContext } from "react";
-import { blockQuestions, questionPrompts, type ReadingTest } from "@ielts/spec";
-import { useLibrary, useTest } from "../../data.ts";
+import { blockQuestions, finalCheckSeconds, listeningPartQuestions, listeningQuestionPrompts, questionPrompts, type ListeningTest, type ReadingTest } from "@ielts/spec";
+import { useLibrary, useTest, type ListeningPayload } from "../../data.ts";
 import { go } from "../../router.ts";
 import { ScoreSummary } from "../ScoreSummary.tsx";
 import { SpeakingScoreCard, SpeakingTestCard } from "./SpeakingCards.tsx";
@@ -31,6 +31,7 @@ export function TestCard({ testId }: { testId: string }) {
   if (!data) return <Skeleton />;
   if (data.kind === "speaking") return <SpeakingTestCard data={data} className={clickable} />;
   if (data.kind === "writing") return <WritingTestCard data={data} className={clickable} />;
+  if (data.kind === "listening") return <ListeningTestCard data={data} />;
   const t = data.test;
   const row = lib?.find((r) => r.id === testId);
   const questions = countQs(t);
@@ -72,6 +73,58 @@ export function TestCard({ testId }: { testId: string }) {
   );
 }
 
+/** A Listening test: its parts, and the recording's progress until the audio is ready. */
+function ListeningTestCard({ data }: { data: ListeningPayload }) {
+  const t = data.test;
+  const questions = t.parts.reduce((n, p) => n + listeningPartQuestions(p).length, 0);
+  const audio = data.audio;
+  const minutes = audio.status === "ready" ? Math.round((audio.parts.reduce((s, p) => s + p.duration, 0) + finalCheckSeconds(t)) / 60) : null;
+  const result = data.attempt?.result;
+  return (
+    <button onClick={() => go({ name: "test", id: data.id, review: false, q: null, part: null })} className={clickable}>
+      <div className="flex items-start gap-4 px-5 pt-5 pb-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-serif text-[22px] font-medium leading-snug text-ink">{t.title}</h3>
+          <p className="mt-1 text-sm text-ink-soft">
+            Listening · {questions} questions{minutes ? ` · ${minutes} min` : ""}
+          </p>
+        </div>
+        {result ? (
+          <span className="font-serif text-[26px] font-semibold leading-none tabular-nums text-ink">{result.band != null ? result.band.toFixed(1) : `${result.raw}/${result.total}`}</span>
+        ) : (
+          <svg aria-hidden viewBox="0 0 16 16" className="mt-2 size-4 shrink-0 text-ink-faint" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M6 3.5 10.5 8 6 12.5" />
+          </svg>
+        )}
+      </div>
+      {!result && audio.status !== "ready" && (
+        <div className="border-t border-rule px-5 py-3">
+          {audio.status === "rendering" ? (
+            <>
+              <p className="text-[13px] text-ink-soft">Recording the audio… {Math.round(audio.progress * 100)}%</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper">
+                <div className="h-full rounded-full bg-listening transition-[width] duration-700" style={{ width: `${Math.max(3, Math.round(audio.progress * 100))}%` }} />
+              </div>
+            </>
+          ) : (
+            <p className="text-[13px] text-danger">The audio could not be recorded. Open the test to try again.</p>
+          )}
+        </div>
+      )}
+      {t.parts.length > 1 && (
+        <ol className="border-t border-rule px-5 py-3">
+          {t.parts.map((p) => (
+            <li key={p.number} className="flex items-baseline gap-3 py-1 text-[15px]">
+              <span className="w-4 shrink-0 text-ink-faint">{p.number}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{p.title}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </button>
+  );
+}
+
 /** Score summary after submission. Click to open the full results. */
 export function ScoreCard({ testId }: { testId: string }) {
   const { data, error } = useTest(testId);
@@ -93,8 +146,8 @@ export function ExplainCard({ testId, items }: { testId: string; items: { q: num
   const { data, error } = useTest(testId);
   if (error) return <Gone error={error} />;
   if (!data) return <Skeleton />;
-  if (data.kind !== "reading" || !data.attempt) return null;
-  const prompts = questionPrompts(data.test);
+  if ((data.kind !== "reading" && data.kind !== "listening") || !data.attempt) return null;
+  const prompts = data.kind === "reading" ? questionPrompts(data.test) : listeningQuestionPrompts(data.test as ListeningTest);
   const marked = new Map(data.attempt.result.items.map((i) => [i.q, i]));
   return (
     <article className={`${shell} divide-y divide-rule`}>

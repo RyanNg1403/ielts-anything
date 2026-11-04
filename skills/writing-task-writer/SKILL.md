@@ -49,7 +49,7 @@ Values and labels:
 
 Maps and process diagrams are drawn as images, in the style of the Cambridge papers. Do this after the data is final and before `writing_publish`:
 
-1. Look at the Cambridge reference figures with the image viewer: `references/process-recycling.png` and `references/process-sugar.png` for a process diagram, `references/map-harbour.png` and `references/map-park.png` for maps. Match their style; never copy their content.
+1. Look at the reference figures with the image viewer: `references/process-biofuel.png` (a numbered manufacturing process) and `references/process-dragonfly.png` (an unnumbered natural cycle) for a process diagram, `references/map-village.png` and `references/map-riverside.png` for maps. They are drawn in the Cambridge style. Match their style; never copy their content.
 2. Generate one image with the image generation tool. Write the prompt from your data:
    - Style: a black-and-white line drawing printed on white paper, like the references: thin black outlines, light grey shading at most, plain sans-serif labels. No colour, no photographs, no 3D effects, no decoration.
    - Text: the title at the top, exactly as in the data, and every label exactly as in the data, spelled letter for letter. List every label in the prompt in quotes. No other text anywhere.

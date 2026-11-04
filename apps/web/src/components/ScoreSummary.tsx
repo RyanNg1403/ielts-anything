@@ -1,9 +1,29 @@
-import type { ReadingResult, ReadingTest } from "@ielts/spec";
+import type { ListeningCandidate, ReadingResult, ReadingTest } from "@ielts/spec";
 import { breakdown, formatDuration, pct } from "../analytics.ts";
 
+/** Each passage (Reading) or part (Listening) with a name for the score bars. */
+export function scoreParts(test: ReadingTest | ListeningCandidate) {
+  return test.kind === "reading"
+    ? test.passages.map((p, i) => ({ label: `Passage ${i + 1}`, title: p.title }))
+    : test.parts.map((p) => ({ label: `Part ${p.number}`, title: p.title }));
+}
+
 /** Band, raw score, parts and question types. Shared by the results screen and the chat score card. */
-export function ScoreSummary({ test, result, elapsedSec, compact, onPick }: { test: ReadingTest; result: ReadingResult; elapsedSec: number | null; compact?: boolean; onPick?: (q: number) => void }) {
-  const b = breakdown(test, result);
+export function ScoreSummary({
+  test,
+  result,
+  elapsedSec,
+  compact,
+  onPick,
+}: {
+  test: ReadingTest | ListeningCandidate;
+  result: ReadingResult;
+  elapsedSec: number | null;
+  compact?: boolean;
+  onPick?: (q: number) => void;
+}) {
+  const parts = scoreParts(test);
+  const b = breakdown(parts.map((p) => p.title), result);
   const time = formatDuration(elapsedSec);
   return (
     <div>
@@ -41,7 +61,7 @@ export function ScoreSummary({ test, result, elapsedSec, compact, onPick }: { te
       {b.parts.length > 1 && (
         <div className="mt-6 space-y-2">
           {b.parts.map((p, i) => (
-            <Bar key={i} label={`Passage ${i + 1}`} hint={p.title} correct={p.correct} total={p.total} />
+            <Bar key={i} label={parts[i]!.label} hint={p.title} correct={p.correct} total={p.total} />
           ))}
         </div>
       )}

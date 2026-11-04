@@ -1,8 +1,8 @@
 import { ScoreSummary } from "../components/ScoreSummary.tsx";
-import type { ReadingPayload } from "../data.ts";
+import type { ListeningPayload, ReadingPayload } from "../data.ts";
 import { exitTest, go } from "../router.ts";
 
-export function Results({ data }: { data: ReadingPayload }) {
+export function Results({ data }: { data: ReadingPayload | ListeningPayload }) {
   const { test, attempt } = data;
   const result = attempt!.result;
   return (
@@ -20,6 +20,14 @@ export function Results({ data }: { data: ReadingPayload }) {
         <div className="mt-8 rounded-2xl border border-rule bg-surface shadow-[var(--shadow-card)] p-6">
           <ScoreSummary test={test} result={result} elapsedSec={attempt!.elapsed_sec} onPick={(q) => go({ name: "test", id: data.id, review: true, q, part: null })} />
         </div>
+        {data.kind === "listening" && (
+          <button
+            onClick={() => go({ name: "test", id: data.id, review: true, q: null, part: null })}
+            className="mt-4 rounded-lg border border-rule-strong bg-surface px-4 py-2 text-sm text-ink hover:bg-paper"
+          >
+            Review with the transcript and audio
+          </button>
+        )}
       </main>
     </div>
   );

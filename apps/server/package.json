@@ -8,8 +8,10 @@
   },
   "dependencies": {
     "@hono/node-server": "2.1.4",
+    "@huggingface/transformers": "3.8.1",
     "@ielts/spec": "*",
     "hono": "4.13.13",
+    "kokoro-js": "1.2.1",
     "ws": "8.22.0",
     "zod": "4.6.5"
   },

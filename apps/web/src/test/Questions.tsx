@@ -1,11 +1,12 @@
 import { Fragment, type ReactNode } from "react";
-import { PARAGRAPH_LABELS, ROMAN, instructionsFor, type MarkedItem, type Passage, type QuestionBlock } from "@ielts/spec";
+import { PARAGRAPH_LABELS, ROMAN, type Instructions, type ListeningBlock, type MarkedItem, type QuestionBlock } from "@ielts/spec";
+import { ListeningMap } from "./figures/diagrams.tsx";
 
 export type Review = Map<number, MarkedItem>;
+/** Reading and Listening blocks share most layouts (completion, multiple choice). */
+export type AnyBlock = QuestionBlock | ListeningBlock;
 
 type Props = {
-  passage: Passage;
-  number: number;
   responses: Record<string, string>;
   onAnswer: (q: number, value: string) => void;
   current: number | null;
@@ -17,18 +18,17 @@ type Props = {
   onAskTutor: (q: number) => void;
 };
 
-export function QuestionsView(props: Props) {
-  const { passage, number } = props;
+export function QuestionsView({ blocks, instructions, paragraphs = 0, ...props }: Props & { blocks: AnyBlock[]; instructions: (b: AnyBlock) => Instructions; paragraphs?: number }) {
   return (
     <div className="space-y-10 px-6 py-8 sm:px-8">
-      {passage.blocks.map((b, i) => (
-        <Block key={i} block={b} {...props} instructions={instructionsFor(b, passage, number)} paragraphs={passage.paragraphs.length} />
+      {blocks.map((b, i) => (
+        <Block key={i} block={b} {...props} instructions={instructions(b)} paragraphs={paragraphs} />
       ))}
     </div>
   );
 }
 
-function Block(props: Props & { block: QuestionBlock; instructions: ReturnType<typeof instructionsFor>; paragraphs: number }) {
+function Block(props: Props & { block: AnyBlock; instructions: Instructions; paragraphs: number }) {
   const { block: b, instructions: ins } = props;
   return (
     <section>
@@ -64,9 +64,56 @@ function emphasise(line: string): ReactNode {
   return parts.map((p, i) => (/^[A-Z]{2,}/.test(p) && p !== "A" ? <strong key={i} className="font-semibold text-ink">{p}</strong> : <Fragment key={i}>{p}</Fragment>));
 }
 
-function BlockBody(props: Props & { block: QuestionBlock; paragraphs: number }) {
+function BlockBody(props: Props & { block: AnyBlock; paragraphs: number }) {
   const { block: b } = props;
   switch (b.family) {
+    case "form_completion":
+      return (
+        <div>
+          <div className="rounded-lg border border-rule bg-surface px-5 py-4">
+            <p className="mb-3 text-center font-semibold text-ink">{b.title}</p>
+            <dl className="grid grid-cols-[minmax(0,auto)_1fr] gap-x-6 gap-y-1.5 text-[15px] leading-8">
+              {b.fields.map((f, i) => (
+                <Fragment key={i}>
+                  <dt className="text-ink-soft">{f.label}</dt>
+                  <dd className="text-ink">
+                    <WithGaps text={f.value} {...props} />
+                  </dd>
+                </Fragment>
+              ))}
+            </dl>
+          </div>
+          <ReviewList qs={b.items.map((i) => i.q)} {...props} />
+        </div>
+      );
+    case "matching":
+      return (
+        <div>
+          <OptionBank title={b.optionsTitle} options={b.options} />
+          <div className="mt-4 space-y-2.5">
+            {b.items.map((it) => (
+              <Item key={it.q} q={it.q} {...props} inline>
+                <span className="flex-1 text-[15px] text-ink">{it.prompt}</span>
+                <Select q={it.q} options={b.options.map((o) => o.letter)} {...props} />
+              </Item>
+            ))}
+          </div>
+        </div>
+      );
+    case "map_labelling":
+      return (
+        <div>
+          <ListeningMap block={b} />
+          <div className="mt-4 space-y-2.5">
+            {b.items.map((it) => (
+              <Item key={it.q} q={it.q} {...props} inline>
+                <span className="flex-1 text-[15px] text-ink">{it.label}</span>
+                <Select q={it.q} options={b.markers.map((m) => m.letter)} {...props} />
+              </Item>
+            ))}
+          </div>
+        </div>
+      );
     case "tfng":
     case "ynng": {
       const labels = b.family === "tfng" ? ["TRUE", "FALSE", "NOT GIVEN"] : ["YES", "NO", "NOT GIVEN"];
@@ -371,7 +418,7 @@ function Choice({ q, options, compact, responses, onAnswer, review }: Props & { 
   );
 }
 
-function MultiChoice(props: Props & { block: Extract<QuestionBlock, { family: "mcq_multi" }> }) {
+function MultiChoice(props: Props & { block: Extract<AnyBlock, { family: "mcq_multi" }> }) {
   const { block: b, responses, onAnswer, review } = props;
   const chosen = b.qs.map((q) => responses[q]).filter(Boolean) as string[];
   const toggle = (letter: string) => {

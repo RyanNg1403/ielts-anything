@@ -133,6 +133,7 @@ function entryFromToolCall(item: any): Entry | null {
     case "explain_questions":
       return item.success ? { kind: "card", id: item.id, card: { kind: "explain", testId: args.testId, items: args.items } } : null;
     case "speaking_publish":
+    case "listening_finalize":
     case "reading_finalize": {
       const m = resultText.match(/test ([0-9a-f-]{36})/);
       return item.success && m ? { kind: "card", id: item.id, card: { kind: "test", testId: m[1]! } } : null;
@@ -309,7 +310,7 @@ export function useConversation(conversationId: string | null, initial?: { curre
             if (form) setEntries((xs) => (xs.some((x) => x.id === form.id) ? xs : [...xs, form]));
           }
           // A test was published or changed in place: refresh every view of it.
-          if (e.phase === "completed" && it.type === "dynamicToolCall" && (it.tool === "reading_finalize" || it.tool === "speaking_publish") && it.success)
+          if (e.phase === "completed" && it.type === "dynamicToolCall" && ["reading_finalize", "listening_finalize", "speaking_publish", "writing_publish"].includes(it.tool) && it.success)
             invalidate("/api/tests");
           return;
         }
@@ -351,6 +352,10 @@ export function useConversation(conversationId: string | null, initial?: { curre
             invalidate("/api/tests");
           }
           return setEntries((xs) => [...xs, { kind: "card", id: crypto.randomUUID(), card: e.card }]);
+        case "test_updated":
+          // A Listening recording made progress or finished.
+          invalidate(`/api/tests/${e.testId}`);
+          return;
         case "open":
           // The tutor started a test: switch to it (live events only, never on history replay).
           if (e.route?.name === "test") location.hash = `#/test/${e.route.id}`;

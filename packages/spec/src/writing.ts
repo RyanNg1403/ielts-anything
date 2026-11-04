@@ -71,6 +71,15 @@ export const processFigureSchema = z.object({
 
 const featureKind = z.enum(["building", "area", "trees", "water", "road", "path"]);
 
+export const mapFeatureSchema = z.object({
+  kind: featureKind.describe(
+    "building = labelled box; area = open land with a dashed edge (car park, sports field); trees = woodland or park; water = sea, lake or river; road and path = lines through 'points'.",
+  ),
+  label: z.string().describe("Text printed on the feature, e.g. 'Car park'. '' for unlabelled water or trees."),
+  box: z.array(z.number()).describe("For building, area, trees and water: [x, y, width, height] on a 100 x 70 grid, origin top left, north up. [] for roads and paths."),
+  points: z.array(z.array(z.number())).describe("For road and path: the line's [x, y] points on the same grid. [] for everything else."),
+});
+
 export const mapFigureSchema = z.object({
   kind: z.literal("map"),
   title,
@@ -79,21 +88,7 @@ export const mapFigureSchema = z.object({
     .array(
       z.object({
         label: z.string().describe("Heading over this plan, e.g. 'Porth Harbour (in 2000)'."),
-        features: z
-          .array(
-            z.object({
-              kind: featureKind.describe(
-                "building = labelled box; area = open land with a dashed edge (car park, sports field); trees = woodland or park; water = sea, lake or river; road and path = lines through 'points'.",
-              ),
-              label: z.string().describe("Text printed on the feature, e.g. 'Car park'. '' for unlabelled water or trees."),
-              box: z
-                .array(z.number())
-                .describe("For building, area, trees and water: [x, y, width, height] on a 100 x 70 grid, origin top left, north up. [] for roads and paths."),
-              points: z.array(z.array(z.number())).describe("For road and path: the line's [x, y] points on the same grid. [] for everything else."),
-            }),
-          )
-          .min(4)
-          .max(24),
+        features: z.array(mapFeatureSchema).min(4).max(24),
       }),
     )
     .min(2)

@@ -7,6 +7,10 @@ corpus/
 
 # Local tooling
 .venv/
+__pycache__/
+.DS_Store
+.refgen/
+.playwright-mcp/
 spikes/*/out/
 
 # Downloaded third-party evidence (official sample PDFs, page renders): keep local

@@ -1,4 +1,4 @@
-import { FAMILY_LABELS, type ReadingResult, type ReadingTest } from "@ielts/spec";
+import { familyLabel, type ReadingResult } from "@ielts/spec";
 
 export type Breakdown = {
   parts: { title: string; correct: number; total: number }[];
@@ -7,8 +7,9 @@ export type Breakdown = {
   missed: number[];
 };
 
-export function breakdown(test: ReadingTest, result: ReadingResult): Breakdown {
-  const parts = test.passages.map((p) => ({ title: p.title, correct: 0, total: 0 }));
+/** Score per passage (Reading) or part (Listening), and per question family. */
+export function breakdown(partTitles: string[], result: ReadingResult): Breakdown {
+  const parts = partTitles.map((title) => ({ title, correct: 0, total: 0 }));
   const fam = new Map<string, { correct: number; total: number }>();
   for (const i of result.items) {
     const part = parts[i.key.passage - 1];
@@ -21,9 +22,7 @@ export function breakdown(test: ReadingTest, result: ReadingResult): Breakdown {
     if (i.correct) f.correct += 1;
     fam.set(i.key.family, f);
   }
-  const families = [...fam.entries()]
-    .map(([family, v]) => ({ family, label: FAMILY_LABELS[family as keyof typeof FAMILY_LABELS] ?? family, ...v }))
-    .sort((a, b) => a.correct / a.total - b.correct / b.total);
+  const families = [...fam.entries()].map(([family, v]) => ({ family, label: familyLabel(family), ...v })).sort((a, b) => a.correct / a.total - b.correct / b.total);
   const weakest = families.find((f) => f.correct < f.total) ?? null;
   return { parts, families, weakest, missed: result.items.filter((i) => !i.correct).map((i) => i.q) };
 }

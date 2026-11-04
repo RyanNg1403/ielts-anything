@@ -1,6 +1,6 @@
 // Shared server data with a tiny cache so cards, pages and the sidebar stay in sync.
 import { useEffect, useState } from "react";
-import type { ReadingTest, ReadingResult, SpeakingCandidate, SpeakingResult, SpeakingTest, WritingResult, WritingTest } from "@ielts/spec";
+import type { ListeningCandidate, ListeningResult, ListeningTest, ReadingTest, ReadingResult, SpeakingCandidate, SpeakingResult, SpeakingTest, WritingResult, WritingTest } from "@ielts/spec";
 
 export type LibraryItem = {
   id: string;
@@ -44,7 +44,22 @@ export type WritingPayload = PayloadBase & {
   attempt: { id: string; responses: { "1"?: string; "2"?: string }; result: WritingResult | { kind: "writing"; marking: 1 }; elapsed_sec: number | null; submitted_at: number } | null;
 };
 
-export type TestPayload = ReadingPayload | SpeakingPayload | WritingPayload;
+/** Who speaks when in a part's recording. Text arrives only after submission. */
+export type AudioCue = { start: number; end: number; who: string; text: string; section?: number; index?: number };
+export type AudioInfo =
+  | { status: "ready"; provider: "kokoro" | "openai"; parts: { duration: number; cues: AudioCue[] }[] }
+  | { status: "rendering"; progress: number; stage: string }
+  | { status: "failed"; error: string };
+
+/** Before submission the paper has no script; afterwards it has the full test. */
+export type ListeningPayload = PayloadBase & {
+  kind: "listening";
+  test: ListeningCandidate | ListeningTest;
+  audio: AudioInfo;
+  attempt: { responses: Record<string, string>; result: ListeningResult; elapsed_sec: number | null; submitted_at: number } | null;
+};
+
+export type TestPayload = ReadingPayload | ListeningPayload | SpeakingPayload | WritingPayload;
 
 export const isMarking = (a: SpeakingPayload["attempt"] | WritingPayload["attempt"]): boolean => !!a && "marking" in a.result;
 
@@ -153,6 +168,23 @@ export async function submitWriting(testId: string, responses: { "1"?: string; "
   invalidate("/api/conversations");
 }
 
+/** Record a Listening test's audio again after it failed. */
+export async function retryAudio(testId: string) {
+  await fetch(`/api/tests/${testId}/audio`, { method: "POST" });
+  invalidate(`/api/tests/${testId}`);
+}
+
+export type VoiceSettings = { listeningVoices: "kokoro" | "openai"; openaiKeySet: boolean; openaiKeyHint: string | null };
+export const useSettings = () => useResource<VoiceSettings>("/api/settings");
+
+export async function saveSettings(patch: { listeningVoices?: "kokoro" | "openai"; openaiKey?: string | null }) {
+  const r = await fetch("/api/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(body?.error ?? "Saving failed.");
+  invalidate("/api/settings");
+  return body as VoiceSettings;
+}
+
 export async function submitAttempt(testId: string, responses: Record<string, string>, elapsedSec: number) {
   const r = await fetch(`/api/tests/${testId}/attempts`, {
     method: "POST",
@@ -160,6 +192,7 @@ export async function submitAttempt(testId: string, responses: Record<string, st
     body: JSON.stringify({ responses, elapsedSec }),
   });
   if (!r.ok) throw new Error("Submitting failed. Try again; your answers are still here.");
+  invalidate(`/api/tests/${testId}`);
   invalidate("/api/tests");
   invalidate("/api/progress");
   invalidate("/api/conversations");

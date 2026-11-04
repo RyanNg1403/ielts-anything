@@ -1,5 +1,5 @@
 // Tools the tutor uses after tests exist: find them, read results, and show cards.
-import { questionPrompts, readingTestSchema, speakingTestSchema, speakingTestText, writingTestSchema } from "@ielts/spec";
+import { listeningQuestionPrompts, listeningTestSchema, questionPrompts, readingTestSchema, speakingTestSchema, speakingTestText, writingTestSchema } from "@ielts/spec";
 import { z } from "zod";
 import { attempts, library, tests } from "../db.ts";
 import { defineTool } from "./registry.ts";
@@ -26,7 +26,7 @@ export const listTests = defineTool({
 export const getTestResult = defineTool({
   name: "get_test_result",
   description:
-    "Get a submitted test's results. Reading: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote and the explanation. " +
+    "Get a submitted test's results. Reading and Listening: for each question the prompt, the learner's answer, the key, whether it was correct, the evidence quote (passage, or the speaker's words) and the explanation; Listening also gives the transcript. " +
     "Writing: the tasks (Task 1 figure data included), the learner's writing, and the marker's bands, evidence and corrections for each criterion. " +
       "Speaking: the questions, the transcript of the interview, and the examiner's band and assessment for each criterion. The transcript is speech recognition: it shows the words, " +
       "grammar and hesitations, but spells mispronounced words correctly, so never use it as evidence about pronunciation. Use before explaining answers or discussing a score.",
@@ -67,12 +67,18 @@ export const getTestResult = defineTool({
         }),
       };
     }
-    const spec = readingTestSchema.parse(JSON.parse(row.spec));
-    const prompts = questionPrompts(spec);
+    const listening = row.kind === "listening" ? listeningTestSchema.parse(JSON.parse(row.spec)) : null;
+    const prompts = listening ? listeningQuestionPrompts(listening) : questionPrompts(readingTestSchema.parse(JSON.parse(row.spec)));
     const result = JSON.parse(attempt.result);
     return {
       text: JSON.stringify({
         title: row.title,
+        ...(listening && {
+          transcript: listening.parts.map((p) => ({
+            part: p.number,
+            lines: p.sections.flatMap((s) => s.lines.map((l) => `${p.speakers.find((sp) => sp.id === l.speaker)?.role ?? l.speaker}: ${l.text}`)),
+          })),
+        }),
         raw: result.raw,
         total: result.total,
         band: result.band,
@@ -117,7 +123,7 @@ export const showScore = defineTool({
 export const explainQuestions = defineTool({
   name: "explain_questions",
   description:
-    "Reading only. Show explanation cards for specific questions of a submitted test: the learner's answer, the key, the passage evidence highlighted, and your explanation. " +
+    "Reading and Listening. Show explanation cards for specific questions of a submitted test: the learner's answer, the key, the evidence (passage or the speaker's words), and your explanation. " +
     "Call get_test_result first, then write a short, specific explanation for each question (why the key is right, and what made the learner's answer tempting). " +
     "The card already shows the learner's answer, the key and the evidence quote, so do not restate them; start with the reasoning.",
   input: z.object({
@@ -126,7 +132,9 @@ export const explainQuestions = defineTool({
   }),
   async run({ testId, items }, ctx) {
     if (!attempts.latest(testId)) return { success: false, text: "That test has not been submitted yet." };
-    if (tests.get(testId)?.kind !== "reading") return { success: false, text: "Explanation cards are for Reading. For Speaking, discuss the feedback in your reply, quoting the transcript." };
+    const kind = tests.get(testId)?.kind;
+    if (kind !== "reading" && kind !== "listening")
+      return { success: false, text: "Explanation cards are for Reading and Listening. For Speaking and Writing, discuss the feedback in your reply, quoting the learner's words." };
     ctx.emit({ type: "card", card: { kind: "explain", testId, items } });
     return { text: `Explanations shown for ${items.map((i) => `Q${i.q}`).join(", ")}.` };
   },

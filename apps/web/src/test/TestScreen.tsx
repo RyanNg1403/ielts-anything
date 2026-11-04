@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { blockQuestions, type MarkedItem } from "@ielts/spec";
+import { blockQuestions, instructionsFor, type MarkedItem, type QuestionBlock } from "@ielts/spec";
 import { submitAttempt, useTest, type ReadingPayload } from "../data.ts";
 import { ConfirmDialog } from "../components/ConfirmDialog.tsx";
+import { ListeningScreen } from "./ListeningScreen.tsx";
 import { SpeakingScreen } from "./SpeakingScreen.tsx";
 import { WritingScreen } from "./WritingScreen.tsx";
 import { askTutor, exitTest, go } from "../router.ts";
@@ -18,6 +19,7 @@ export function TestScreen(props: TestRoute) {
   const { data, error } = useTest(props.id);
   if (data?.kind === "speaking") return <SpeakingScreen data={data} />;
   if (data?.kind === "writing") return <WritingScreen data={data} />;
+  if (data?.kind === "listening") return <ListeningScreen {...props} data={data} />;
   return <ReadingScreen {...props} data={data as ReadingPayload | undefined} error={error} />;
 }
 
@@ -170,8 +172,9 @@ function ReadingScreen({ id, review: reviewRoute, q: startQ, part: startPart, da
         </div>
         <div className="min-h-0 overflow-y-auto">
           <QuestionsView
-            passage={passage}
-            number={part + 1}
+            blocks={passage.blocks}
+            instructions={(b) => instructionsFor(b as QuestionBlock, passage, part + 1)}
+            paragraphs={passage.paragraphs.length}
             responses={responses}
             onAnswer={onAnswer}
             current={current}
@@ -228,8 +231,9 @@ export function Clock({ remaining }: { remaining: number }) {
   );
 }
 
-function Navigator({
+export function Navigator({
   parts,
+  labels,
   part,
   current,
   responses,
@@ -239,6 +243,7 @@ function Navigator({
   onJump,
 }: {
   parts: number[][];
+  labels?: string[];
   part: number;
   current: number | null;
   responses: Record<string, string>;
@@ -257,7 +262,7 @@ function Navigator({
         return (
           <div key={p} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 ${p === part ? "bg-paper" : ""}`}>
             <button onClick={() => onPart(p)} className="mr-1 text-[13px] font-semibold whitespace-nowrap text-ink">
-              Part {p + 1}
+              {labels?.[p] ?? `Part ${p + 1}`}
               <span className="ml-1.5 font-normal text-ink-soft">
                 {review ? `${correct}/${qs.length}` : `${answered}/${qs.length}`}
               </span>
@@ -311,6 +316,6 @@ export function Dialog({ children, onClose }: { children: React.ReactNode; onClo
   );
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
+export function Centered({ children }: { children: React.ReactNode }) {
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-paper text-ink-soft">{children}</div>;
 }

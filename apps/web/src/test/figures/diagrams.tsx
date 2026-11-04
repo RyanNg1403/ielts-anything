@@ -1,6 +1,6 @@
 // Process diagrams and before/after plans for Writing Task 1, drawn from the test data.
 import { useId } from "react";
-import { MAP_GRID, rect, type MapFeature, type MapFigure, type ProcessFigure } from "@ielts/spec";
+import { MAP_GRID, rect, type ListeningBlock, type MapFeature, type MapFigure, type ProcessFigure } from "@ielts/spec";
 import { FONT, FigureTitle, Lines, Patterns, wrap } from "./shared.tsx";
 
 const NODE_W = 112;
@@ -167,7 +167,7 @@ function Feature({ x, id, layer = "label" }: { x: MapFeature; id: string; layer?
     case "water":
       return (
         <g>
-          <rect x={px} y={py} width={pw} height={ph} className="fill-accent/10" />
+          <rect x={px} y={py} width={pw} height={ph} className="fill-water/10" />
           <rect x={px} y={py} width={pw} height={ph} fill={`url(#${id}-waves)`} />
           {label}
         </g>
@@ -220,6 +220,46 @@ function Compass({ x, y }: { x: number; y: number }) {
   );
 }
 
+/** Layered drawing of one plan's features: water, open land, roads, then paths and buildings on top. */
+function PlanFeatures({ features, id }: { features: MapFeature[]; id: string }) {
+  return (
+    <>
+      {features.filter((x) => x.kind === "water").map((x, i) => <Feature key={i} x={x} id={id} />)}
+      {features.filter((x) => x.kind === "area" || x.kind === "trees").map((x, i) => <Feature key={i} x={x} id={id} />)}
+      {(["outline", "fill", "label"] as const).flatMap((layer) => features.filter((x) => x.kind === "road").map((x, i) => <Feature key={`${layer}${i}`} x={x} id={id} layer={layer} />))}
+      {features.filter((x) => x.kind === "path" || x.kind === "building").map((x, i) => <Feature key={i} x={x} id={id} />)}
+    </>
+  );
+}
+
+/** A Listening map or plan: labelled landmarks, and lettered places for the candidate to identify. */
+export function ListeningMap({ block }: { block: Extract<ListeningBlock, { family: "map_labelling" }> }) {
+  const id = useId().replace(/:/g, "");
+  const [W, H] = [MAP_GRID.width * S, MAP_GRID.height * S];
+  const pad = block.compass ? 76 : 0;
+  return (
+    <figure className="overflow-x-auto rounded-lg border border-rule bg-surface px-3 py-3">
+      <FigureTitle>{block.title}</FigureTitle>
+      <svg viewBox={`${-pad} -4 ${W + pad + 4} ${H + 8}`} className="w-full min-w-[480px]" role="img" aria-label={`${block.title}: letters ${block.markers.map((m) => m.letter).join(", ")}`}>
+        <Patterns id={id} />
+        <rect x="0" y="0" width={W} height={H} className="fill-surface stroke-ink" strokeWidth="1" />
+        <svg x="0" y="0" width={W} height={H} viewBox={`0 0 ${W} ${H}`} overflow="hidden">
+          <PlanFeatures features={block.features} id={id} />
+          {block.markers.map((m) => (
+            <g key={m.letter} transform={`translate(${m.x * S} ${m.y * S})`}>
+              <circle r="11" className="fill-surface stroke-ink" strokeWidth="1.6" />
+              <text fontSize={FONT + 1} fontWeight="700" textAnchor="middle" dominantBaseline="central" className="fill-ink">
+                {m.letter}
+              </text>
+            </g>
+          ))}
+        </svg>
+        {block.compass && <Compass x={-pad / 2} y={36} />}
+      </svg>
+    </figure>
+  );
+}
+
 export function MapPlans({ f }: { f: MapFigure }) {
   const id = useId().replace(/:/g, "");
   const [W, H] = [MAP_GRID.width * S, MAP_GRID.height * S];
@@ -235,12 +275,7 @@ export function MapPlans({ f }: { f: MapFigure }) {
               <Patterns id={id} />
               <rect x="0" y="0" width={W} height={H} className="fill-surface stroke-ink" strokeWidth="1" />
               <svg x="0" y="0" width={W} height={H} viewBox={`0 0 ${W} ${H}`} overflow="hidden">
-                {s.features.filter((x) => x.kind === "water").map((x, i) => <Feature key={i} x={x} id={id} />)}
-                {s.features.filter((x) => x.kind === "area" || x.kind === "trees").map((x, i) => <Feature key={i} x={x} id={id} />)}
-                {(["outline", "fill", "label"] as const).flatMap((layer) =>
-                  s.features.filter((x) => x.kind === "road").map((x, i) => <Feature key={`${layer}${i}`} x={x} id={id} layer={layer} />),
-                )}
-                {s.features.filter((x) => x.kind === "path" || x.kind === "building").map((x, i) => <Feature key={i} x={x} id={id} />)}
+                <PlanFeatures features={s.features} id={id} />
               </svg>
               {f.compass && <Compass x={-pad / 2} y={36} />}
             </svg>

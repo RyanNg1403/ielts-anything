@@ -6,7 +6,7 @@ Status: **draft for approval**. Nothing is built yet.
 
 A local, open-source web app that turns any topic or source into IELTS Academic practice that looks and behaves like a Cambridge IELTS paper. It runs on the learner's own Codex subscription. Learners pick a skill (Reading, Listening, Writing, Speaking) and either a **full test** or a **focused drill** (one passage, one question type). They take it in a screen modelled on computer-delivered IELTS and get a band score with examiner-style feedback.
 
-Settled decisions: Academic only, English UI, full tests and drills, computer-IELTS test screen, OpenAI TTS for Listening (Kokoro as free fallback), Codex realtime voice for Speaking, format rules from Cambridge 12–21 only.
+Settled decisions: Academic only, English UI, full tests and drills, computer-IELTS test screen, Kokoro TTS for Listening by default (free, local), OpenAI TTS as a paid option with the learner's key, Codex realtime voice for Speaking, format rules from Cambridge 12–21 only.
 
 ## 2. Architecture
 
@@ -81,7 +81,7 @@ New sources are easy to add later (YouTube transcript, RSS, GitHub repo).
 ## 5. Per-skill pipelines
 
 - **Reading:** brief → 3 passages, getting harder from 1 to 3, about 650–1,000 words each and genre-mixed → question blocks following the Cambridge position mix → validators → solver pass → publish. Drill: one passage plus one chosen family.
-- **Listening:** brief → four scripts that follow the Cambridge audioscript patterns (Part 1 roughly 700 words of real back-and-forth, answers embedded, self-corrections as distractors) → items → validators → audio. Audio is rendered line by line with OpenAI `gpt-4o-mini-tts` (a British/Australian/American mix, male and female), then stitched with preview and check pauses. A transcription check confirms that every keyed word is audible.
+- **Listening:** brief → four scripts that follow the Cambridge audioscript patterns (Part 1 roughly 700 words of real back-and-forth, answers embedded, self-corrections as distractors) → items → validators → audio. Audio is rendered line by line with Kokoro (local, British and American voices) or, when the learner chooses it in Settings, OpenAI `gpt-4o-mini-tts` (adds Australian and New Zealand accents), male and female, then stitched with the narrator, preview and check pauses. An independent solver checks the key against the transcript; there is no transcription check of the rendered audio yet.
 - **Writing:** Task 1 visuals are drawn from a data spec by our own components: line, bar, pie, table, mixed, process diagram and map/plan. They are not image-generated, so the numbers are exact. Task 2 prompts come from the five Cambridge question families. Grading runs `writing-examiner` and returns a band per criterion, quoted evidence and corrections.
 - **Speaking:** WebRTC session with a Codex realtime voice (v3, 9 voices) acting as examiner for Parts 1–3, with timed Part 2 prep. The transcript then goes to `speaking-assessor`. Pronunciation is marked as an **estimate**, since the grader only sees text.
 - **Images:** Codex image generation is used only for decorative illustrations (Reading header art, Listening scene art). Exam visuals are drawn by code.
