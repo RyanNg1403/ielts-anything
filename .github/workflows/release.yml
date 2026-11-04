@@ -29,10 +29,9 @@ jobs:
           fi
       - run: npm run typecheck
       - run: npm test
+      # Trusted publishing: npm verifies this workflow's GitHub OIDC token, so no npm token is stored.
       # prepack builds the web app and the CLI bundle.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
