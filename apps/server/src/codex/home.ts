@@ -1,6 +1,6 @@
 // The app runs Codex with its own CODEX_HOME so IELTS threads stay out of the learner's
 // coding history, and their global AGENTS.md / memories do not leak into generated tests.
-import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -36,8 +36,10 @@ export function ensureCodexHome(): { loggedIn: boolean } {
 
   const auth = join(CODEX_HOME, "auth.json");
   const userAuth = join(USER_CODEX_HOME, "auth.json");
-  const present = existsSync(auth) || isSymlink(auth);
-  if (!present && existsSync(userAuth)) symlinkSync(userAuth, auth);
+  // A link made under a different CODEX_HOME (e.g. another tool's account folder) can later point
+  // nowhere; replace it with the learner's current login.
+  if (isSymlink(auth) && !existsSync(auth)) unlinkSync(auth);
+  if (!existsSync(auth) && existsSync(userAuth)) symlinkSync(userAuth, auth);
   return { loggedIn: existsSync(auth) };
 }
 

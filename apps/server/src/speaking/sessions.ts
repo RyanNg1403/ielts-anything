@@ -52,6 +52,9 @@ export class SpeakingSessions {
         // The examiner never hands work to Codex.
         clientManagedHandoffs: true,
         prompt: examinerPrompt(test),
+        // Realtime v3 (Codex 0.166+) ignores `prompt`: without this the examiner answers like a
+        // general assistant ("What's next?") instead of running the test.
+        initialItems: [{ role: "developer", text: examinerPrompt(test) }],
       });
       return { sessionId: session.id, sdp: await answer };
     } catch (err) {
