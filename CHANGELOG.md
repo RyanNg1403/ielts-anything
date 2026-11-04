@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.2
+
+- Releases are now published with npm trusted publishing from GitHub Actions, with provenance and no stored npm token. No changes to the app.
+
 ## 0.0.1
 
 First release. Run it with `npx ielts-anything`.
