@@ -1,123 +1,85 @@
 <p align="center">
-  <img src="apps/web/public/branding/emblem-ielts-four-skills.svg" alt="IELTS Anything emblem: the four skills in one frame" width="96" />
+  <img src="apps/web/public/branding/emblem-ielts-four-skills.svg" alt="" width="80" />
 </p>
 
 <h1 align="center">IELTS Anything</h1>
 
-<p align="center">
-  <strong>Practise IELTS Academic on whatever you care about.</strong><br/>
-  Type a topic. Get a test that looks, sounds and marks like a Cambridge IELTS paper.
-</p>
+<p align="center"><strong>IELTS Academic practice on any topic you like.</strong><br/>
+Type a topic; get a test that looks, sounds and marks like a Cambridge IELTS paper.</p>
 
----
+<p align="center"><img src="docs/screenshots/home.png" alt="Home: what do you want to practise?" width="85%" /></p>
 
-Bored of reading about the history of the bicycle for the tenth time? Ask for a Reading test on **how frontier AI labs are governed**, a Listening test about **booking a climbing course**, a Writing task on **electric car sales since 2015**, or a Speaking interview about **the piece of technology you can't live without**. IELTS Anything writes it in the exact format of the Cambridge IELTS Academic books 12–21, checks it like an examiner would, lets you sit it in a screen modelled on computer-delivered IELTS, and gives you a band score with feedback you can act on.
+Ask for *a Reading test on how AI labs are governed* or *a Listening drill about booking a climbing course*. The tutor (Codex) writes it in the exact format of Cambridge IELTS 12–21, checks every answer, and opens it in a screen modelled on computer-delivered IELTS. You get a band score and feedback. It runs locally on your own Codex subscription.
 
-It runs on your computer, on your own [Codex](https://developers.openai.com/codex) subscription. No accounts and no app servers: your tests, answers and recordings stay on your machine. Only Codex sees what it needs to write and mark your practice (and OpenAI's speech service sees Listening scripts, if you choose its voices).
+## Four skills
 
-## The four skills
+**Reading**: three passages, 40 questions, every Cambridge question type. An independent solver sits the paper without the key before you see it; review shows the evidence in the passage.
 
-| | What you get | How it is checked |
-|---|---|---|
-| **Reading** | Three passages and 40 questions (or a one-passage drill), in Cambridge register: TRUE/FALSE/NOT GIVEN, matching headings, summary completion and every other family. | Every answer needs an exact evidence quote from the passage. An independent solver sits the paper without the key; disputed items are fixed or justified before you see them. |
-| **Listening** | Four recorded parts, 40 questions, about 30 minutes: a phone booking, a guided walk with a map, a student discussion, a lecture. A narrator, question-reading time and checking pauses, just like the real recording. | The script is validated (answers heard in order, with time to write), and the solver answers from the transcript. After the test you review it line by line, with the audio jumping to where each answer was said. |
-| **Writing** | Task 1 (charts, tables, maps and process diagrams drawn from real data) and Task 2 (every Cambridge essay family). | Marked against the official public band descriptors, criterion by criterion, with your own sentences quoted as evidence and concrete corrections. |
-| **Speaking** | A live interview with a voice examiner: Part 1 questions, a Part 2 cue card with a minute to prepare, a Part 3 discussion. | The examiner who heard you marks you against the official descriptors, pronunciation included. |
+<p align="center"><img src="docs/screenshots/reading-review.png" alt="Reading review with the evidence highlighted" width="85%" /></p>
 
-Every skill also comes as a **drill**: one passage, one part, one task, or one question type.
+**Listening**: four recorded parts with a narrator and reading time, maps and forms. Exam mode plays once; practice mode lets you replay. Review shows the transcript and jumps the audio to each answer.
 
-## Voices for Listening
+<table><tr>
+<td><img src="docs/screenshots/listening-map.png" alt="Listening map labelling" /></td>
+<td><img src="docs/screenshots/listening-review.png" alt="Listening review with transcript" /></td>
+</tr></table>
 
-Listening tests are recorded by the app after they are written, with a cast of different voices so the test sounds like real people:
+**Writing**: Task 1 figures (charts, tables, maps, processes) and Task 2 essays, marked criterion by criterion against the official descriptors, quoting your own sentences.
 
-- **Kokoro** (default): free, runs on your computer. Eight British voices and several American ones. The first test downloads a 90 MB voice model; a full test records in about ten minutes.
-- **OpenAI** (optional, paid): add your own API key in Settings to use `gpt-4o-mini-tts`. More natural delivery, and it adds Australian and New Zealand accents. Roughly 40 cents per full test.
+<table><tr>
+<td><img src="docs/screenshots/writing.png" alt="Writing Task 1 with a process diagram" /></td>
+<td><img src="docs/screenshots/writing-results.png" alt="Writing results by criterion" /></td>
+</tr></table>
 
-Take a test in **exam mode** (the recording plays once and cannot be paused) or **practice mode** (pause, rewind, replay any part).
+**Speaking**: a live interview with a voice examiner (Parts 1–3, timed cue card), marked by the examiner who heard you.
 
-## Drawn like the real thing
+<table><tr>
+<td><img src="docs/screenshots/speaking.png" alt="Speaking room" /></td>
+<td><img src="docs/screenshots/chat.png" alt="Chat with a score card" /></td>
+</tr></table>
 
-Writing Task 1 maps and process diagrams are drawn with image generation, in the black-and-white style of the Cambridge papers. The tutor studies these original reference drawings first, and every generated figure is checked against its data before you see it:
+Every skill also comes as a drill: one passage, part, task or question type. Progress tracks your bands and weakest question types.
 
-<p align="center">
-  <img src="skills/writing-task-writer/references/process-biofuel.png" alt="Process diagram: turning used cooking oil into biofuel" width="45%" />
-  <img src="skills/writing-task-writer/references/map-village.png" alt="Two plans of a village in 1995 and today" width="45%" />
-</p>
+<p align="center"><img src="docs/screenshots/progress.png" alt="Progress page" width="85%" /></p>
 
-Line graphs, bar charts, pie charts, tables and Listening maps are drawn by the app from data, so the numbers you describe are exactly the numbers the marker checks.
+## Listening voices
+
+<img src="docs/screenshots/settings-voices.png" alt="Listening voice settings" width="420" align="right" />
+
+- **Kokoro** (default): free and local. British and American voices; a 90 MB model downloads once.
+- **OpenAI** (optional): your own API key, `gpt-4o-mini-tts`. Adds Australian and New Zealand accents, about 40 cents per full test.
+
+<br clear="right"/>
 
 ## Quick start
 
-You need:
-
-- **Node.js 22.13 or newer** (the app uses the built-in `node:sqlite`).
-- **The Codex CLI**, signed in: `codex login`. The app reuses that login; it keeps its own Codex home in `~/.ielts-anything` so your coding history and memories stay separate.
+Requires **Node.js 22.13+** and the **Codex CLI**, signed in (`codex login`).
 
 ```bash
 git clone https://github.com/RyanNg1403/ielts-anything.git
 cd ielts-anything
 npm install
-npm run dev
+npm run dev        # then open http://127.0.0.1:5173
 ```
 
-Open **http://127.0.0.1:5173** and type what you want to practise, for example *"A Listening test about volunteering in a nature reserve"*.
-
-Speaking needs a microphone; Listening needs headphones or speakers.
+Data lives in `~/.ielts-anything`, separate from your Codex coding history.
 
 ## How it works
 
-```mermaid
-flowchart LR
-  You([You]) <--> UI[React app<br/>chat and test screens]
-  UI <-->|WebSocket| Server[Node server]
-  Server <-->|JSON-RPC| Codex[codex app-server]
-  Codex -->|reads| Skills[skills/<br/>Cambridge format rules]
-  Codex -->|calls| Tools[App tools<br/>publish, validate, solve]
-  Tools --> Spec[packages/spec<br/>schemas, validators, marking]
-  Tools --> Voices[Kokoro or OpenAI<br/>Listening audio]
-  Tools --> DB[(SQLite<br/>tests and attempts)]
-```
-
-- The **tutor** is Codex, guided by the skills in [`skills/`](skills): one per job (writing passages, writing items, auditing keys, writing scripts, marking essays and speech). They encode the Cambridge format as concrete rules and measured frequencies.
-- Codex never writes a test into the chat. It publishes through **app tools** that validate every passage, part or task against the format and send back errors to fix.
-- **[`packages/spec`](packages/spec)** holds the shared schemas, the printed instructions (Cambridge wording), the validators, the narration and the marking. It is plain TypeScript with unit tests.
-- Answers, scripts and Speaking questions stay on the server until you have taken the test.
-
-## Project layout
+The tutor follows the skills in [`skills/`](skills) and publishes through app tools that validate every passage, part and task against the format; [`packages/spec`](packages/spec) holds the shared schemas, validators and marking. Answers and scripts stay on the server until you submit.
 
 ```
-apps/server     Node server: Codex bridge, app tools, marking, Listening audio, settings
-apps/web        React app: chat, test screens, results, library, progress, settings
-packages/spec   Shared schemas, validators, instructions, narration and marking (with tests)
-skills          The tutor's skills, one folder each, with reference drawings for Writing
-research        Format research: question-type frequencies, rules and their sources
-spikes          Experiments behind the voice, marking and figure choices
-docs            The build plan and UX notes
+apps/server     Codex bridge, app tools, marking, Listening audio
+apps/web        Chat, test screens, results, progress, settings
+packages/spec   Schemas, validators, instructions, marking (npm test)
+skills          The tutor's skills and Writing reference drawings
+research        Format research and sources
 ```
 
-## Configuration
+Environment overrides (`.env`): `IELTS_HOME`, `IELTS_MODEL`, `IELTS_EFFORT`, `IELTS_VOICE`, `IELTS_EXAMINER_VOICE`, `PORT`.
 
-Most things are set in the app (Settings: appearance, Listening voices, OpenAI key). For development, these environment variables are read from `.env`:
+## About Cambridge and IELTS
 
-| Variable | Default | What it does |
-|---|---|---|
-| `IELTS_HOME` | `~/.ielts-anything` | Where the app keeps its database, recordings, voice model and Codex home |
-| `IELTS_MODEL`, `IELTS_EFFORT` | `gpt-6-luna`, `max` | The Codex model and thinking effort used unless you pick another in the composer |
-| `IELTS_VOICE`, `IELTS_EXAMINER_VOICE` | `juniper`, `spruce` | Realtime voices for the spoken tutor and the Speaking examiner |
-| `PORT` | `8787` | Server port (the web app proxies `/api` to it) |
+This is Cambridge-format practice, not official tests, and is not affiliated with IELTS, the British Council, IDP or Cambridge. The repository publishes only counts, rules and paraphrases from studying Cambridge IELTS 12–21, never the books, passages, scripts or audio. Band scores are estimates.
 
-## Development
-
-```bash
-npm test            # spec unit tests (validators, marking, narration)
-npm run typecheck   # all three workspaces
-npx tsx apps/server/scripts/render-listening.ts   # record the sample Listening drill to hear the voices
-```
-
-## A word on Cambridge and IELTS
-
-IELTS Anything creates **Cambridge-format practice**, not official tests, and it is not affiliated with IELTS, the British Council, IDP or Cambridge University Press & Assessment. The format rules come from studying the retired papers in Cambridge IELTS 12–21; this repository publishes only counts, rules and paraphrases from that study, never the books, passages, scripts or audio. The band descriptors quoted in the marking skills are the official public versions. Band scores are estimates.
-
-## License
-
-MIT, as declared in `package.json`.
+MIT licence, as declared in `package.json`.
