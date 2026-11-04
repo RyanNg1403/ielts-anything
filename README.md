@@ -4,11 +4,11 @@
 
 <h1 align="center">IELTS Anything</h1>
 
-<p align="center"><strong>IELTS prep that doesn't make you want to lie face down on the floor 🫩</strong></p>
+<p align="center"><strong>ielts prep, minus the soil erosion 🫩</strong></p>
 
-Be honest. You opened an IELTS book, saw a 900-word passage about soil erosion, and felt your soul leave your body 🥀 Then the Listening was a man booking a library card. For four minutes. Respectfully, no 😭
+be so fr, nobody locks in for a 900-word passage on soil erosion 🥀 and the listening where a guy spends four minutes getting a library card? we're cooked 😭
 
-IELTS Anything writes the test about **whatever you're into**. Football, K-pop, Formula 1, space, the latest AI drama: type it, get a real Cambridge-format paper on it. Same question types, same timing, same "is this FALSE or NOT GIVEN??" crisis. It's still the exam, it just finally has a plot 😏✌️
+IELTS Anything writes the test about stuff you'd doomscroll anyway: football, K-pop, F1, whatever AI drama dropped this week. it's a real Cambridge-format paper, same question types, same timing, same FALSE vs NOT GIVEN spiral. the topic just isn't mid anymore ✌️
 
 ## Quickstart ⚡
 
