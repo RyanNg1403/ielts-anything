@@ -1,0 +1,3 @@
+# Research tools and experiments, not the app: keep them out of GitHub's language stats.
+research/** linguist-documentation
+spikes/** linguist-documentation
