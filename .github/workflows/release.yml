@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write # GitHub release
-  id-token: write # npm provenance
+  id-token: write # npm trusted publishing and provenance
 
 jobs:
   publish:
