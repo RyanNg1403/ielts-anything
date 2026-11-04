@@ -19,6 +19,16 @@ cd ielts-anything && npm install && npm run dev
 
 Open http://127.0.0.1:5173, type *"a Listening test about my fave football club"*, go touch grass for a sec 🌱
 
+## What's free 💸
+
+| | What you need |
+|---|---|
+| **Reading** and **Writing** | A free ChatGPT account. That's it, start today 🆓 |
+| **Listening** | Free too, with voices that run on your laptop. Plug in an OpenAI API key and the audio goes from "fine" to actually good 🎧 |
+| **Speaking** | ChatGPT Plus or above. The live voice examiner needs it 🎙️ |
+
+no Plus and no API key? brokie behaviour fr 😭 Reading, Writing and Listening still work though, so no excuses.
+
 ## What it does 👀
 
 **Ask for literally anything.** Pick a topic and a skill. Full test or a quick drill, your call.
@@ -63,7 +73,7 @@ Open http://127.0.0.1:5173, type *"a Listening test about my fave football club"
 
 ## Install and nerd stuff 🤓
 
-**You need:** Node.js 22.13+ and the [Codex CLI](https://developers.openai.com/codex), signed in with `codex login`. It runs on your own Codex subscription and keeps its data in `~/.ielts-anything`, away from your coding history.
+**You need:** Node.js 22.13+ and the [Codex CLI](https://developers.openai.com/codex), signed in with your ChatGPT account (`codex login`). A free account covers Reading, Writing and Listening; Speaking needs ChatGPT Plus or above. The app keeps its data in `~/.ielts-anything`, away from your coding history.
 
 **Listening voices** (Settings):
 - **Kokoro** (default): free, runs locally, British and American voices. A 90 MB model downloads the first time.
